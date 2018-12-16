@@ -1577,7 +1577,7 @@ Var BattleGround: TDictionary<TPosition, Boolean>;
     Position.x := Position.x -1; //Left
     Result[1] := Position;
     Position := aStartPosition;
-     Position.x := Position.x +1; //Right
+    Position.x := Position.x +1; //Right
     Result[2] := Position;
     Position := aStartPosition;
     Position.y := Position.y +1; //Bottem
@@ -1612,7 +1612,6 @@ Var BattleGround: TDictionary<TPosition, Boolean>;
       PlayerData: TPair<TPosition, TPlayer>;
       p, p2, p3: TPosition;
       MinDistance, x, y, i: Integer;
-
       PointAdded: Boolean;
       Positions: TPositions;
   begin

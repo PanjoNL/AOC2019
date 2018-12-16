@@ -47,6 +47,11 @@ type TCart = record
   procedure init(Const aDirection: String);
 end;
 
+TPlayer = record
+  PlayerType: String;
+  HitPoints: Integer;
+end;
+
 TRegisterInstruction = record
   id: Integer;
   ValueA: Integer;
@@ -208,13 +213,6 @@ type TAdventOfCodeDay16 = class(TAdventOfCode)
     function ReadRegisterInstruction(const aInstruction: string): TRegisterInstruction;
     Function Calculate(Const aRegister: TRegister; aInput: TRegisterInstruction; Id: integer): TRegister;
 end;
-
-TPlayer = record
-  PlayerType: String;
-  HitPoints: Integer;
-
-end;
-
 
 
 {$REGION 'Blank'}

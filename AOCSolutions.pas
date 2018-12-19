@@ -60,7 +60,8 @@ TRegisterInstruction = record
 end;
 
 type TPositions = array[0..3] of TPosition;
-type TRegister = array[0..3] of Integer;
+type TRegister = array[0..5] of Integer;
+type ForestPositions = array[0..7] of TPosition;
 
 type TAdventOfCodeDay1 = class(TAdventOfCode)
   protected
@@ -211,9 +212,41 @@ type TAdventOfCodeDay16 = class(TAdventOfCode)
   private
     function ReadRegister(const aRegister: string): TRegister;
     function ReadRegisterInstruction(const aInstruction: string): TRegisterInstruction;
-    Function Calculate(Const aRegister: TRegister; aInput: TRegisterInstruction; Id: integer): TRegister;
 end;
 
+type TAdventOfCodeDay17 = class(TAdventOfCode)
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
+  private
+    FWaterGrid, FClayGrid: TDictionary<TPosition, String>;
+    FMaxY: integer;
+    procedure Print;
+    procedure LetWaterFall(StartPosition: TPosition);
+    procedure MarkStationaryWater(StartPosition: TPosition; aDirection: Integer);
+    function LetWaterFlow(StartPosition: TPosition; aDirection: Integer): boolean;
+    function IsOverFlowing(StartPosition: TPosition; aDirection: Integer): boolean;
+end;
+
+type TAdventOfCodeDay18 = class(TAdventOfCode)
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+  private
+    function Solve(Const aItterationCount: integer): Integer;
+end;
+
+type TAdventOfCodeDay19 = class(TAdventOfCode)
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+  private
+    procedure RunProgram(const aMaxIterations: integer; var aRegisters: TRegister);
+end;
+
+function ModifyRegister(Const aRegister: TRegister; aInput: TRegisterInstruction; InstuctionId: integer): TRegister;
 
 {$REGION 'Blank'}
 //type TAdventOfCodeDay = class(TAdventOfCode)
@@ -349,6 +382,30 @@ begin
   if (aDirection = '^') then begin XSpeed := 0;  YSpeed := -1; end;
   if (aDirection = '<') then begin XSpeed := -1; YSpeed := 0;  end;
   if (aDirection = '>') then begin XSpeed := 1;  YSpeed := 0;  end;
+end;
+{$ENDREGION}
+{$REGION 'Function ModifyRegister'}
+Function ModifyRegister(Const aRegister: TRegister; aInput: TRegisterInstruction; InstuctionId: integer): TRegister;
+begin
+  Result := aRegister;
+  case InstuctionId of
+    0: Result[aInput.ValueC] := Result[aInput.ValueA] + Result[aInput.ValueB];
+    1: Result[aInput.ValueC] := Result[aInput.ValueA] + aInput.ValueB;
+    2: Result[aInput.ValueC] := Result[aInput.ValueA] * Result[aInput.ValueB];
+    3: Result[aInput.ValueC] := Result[aInput.ValueA] * aInput.ValueB;
+    4: Result[aInput.ValueC] := Result[aInput.ValueA] and Result[aInput.ValueB];
+    5: Result[aInput.ValueC] := Result[aInput.ValueA] and aInput.ValueB;
+    6: Result[aInput.ValueC] := Result[aInput.ValueA] or Result[aInput.ValueB];
+    7: Result[aInput.ValueC] := Result[aInput.ValueA] or aInput.ValueB;
+    8: Result[aInput.ValueC] := Result[aInput.ValueA];
+    9: Result[aInput.ValueC] := aInput.ValueA;
+    10:Result[aInput.ValueC] := IfThen((aInput.ValueA > Result[aInput.ValueB]), 1);
+    11:Result[aInput.ValueC] := IfThen((Result[aInput.ValueA] > AInput.ValueB), 1);
+    12:Result[aInput.ValueC] := IfThen((Result[aInput.ValueA] > Result[aInput.ValueB]), 1);
+    13:Result[aInput.ValueC] := IfThen((aInput.ValueA = Result[aInput.ValueB]), 1);
+    14:Result[aInput.ValueC] := IfThen((Result[aInput.ValueA] = aInput.ValueB), 1);
+    15:Result[aInput.ValueC] := IfThen((Result[aInput.ValueA] = Result[aInput.ValueB]), 1);
+  end;
 end;
 {$ENDREGION}
 
@@ -1806,29 +1863,6 @@ begin
 end;
 {$ENDREGION}
 {$REGION 'TAdventOfCodeDay16'}
-Function TAdventOfCodeDay16.Calculate(Const aRegister: TRegister; aInput: TRegisterInstruction; Id: integer): TRegister;
-begin
-  Result := aRegister;
-  case id of
-    0: Result[aInput.ValueC] := Result[aInput.ValueA] + Result[aInput.ValueB];
-    1: Result[aInput.ValueC] := Result[aInput.ValueA] + aInput.ValueB;
-    2: Result[aInput.ValueC] := Result[aInput.ValueA] * Result[aInput.ValueB];
-    3: Result[aInput.ValueC] := Result[aInput.ValueA] * aInput.ValueB;
-    4: Result[aInput.ValueC] := Result[aInput.ValueA] and Result[aInput.ValueB];
-    5: Result[aInput.ValueC] := Result[aInput.ValueA] and aInput.ValueB;
-    6: Result[aInput.ValueC] := Result[aInput.ValueA] or Result[aInput.ValueB];
-    7: Result[aInput.ValueC] := Result[aInput.ValueA] or aInput.ValueB;
-    8: Result[aInput.ValueC] := Result[aInput.ValueA];
-    9: Result[aInput.ValueC] := aInput.ValueA;
-    10:Result[aInput.ValueC] := IfThen((aInput.ValueA > Result[aInput.ValueB]), 1);
-    11:Result[aInput.ValueC] := IfThen((Result[aInput.ValueA] > AInput.ValueB), 1);
-    12:Result[aInput.ValueC] := IfThen((Result[aInput.ValueA] > Result[aInput.ValueB]), 1);
-    13:Result[aInput.ValueC] := IfThen((aInput.ValueA = Result[aInput.ValueB]), 1);
-    14:Result[aInput.ValueC] := IfThen((Result[aInput.ValueA] = aInput.ValueB), 1);
-    15:Result[aInput.ValueC] := IfThen((Result[aInput.ValueA] = Result[aInput.ValueB]), 1);
-  end;
-end;
-
 function TAdventOfCodeDay16.ReadRegister(const aRegister: string): TRegister;
 var Line: TStringList;
     s: string;
@@ -1883,7 +1917,7 @@ begin
     SameResult := 0;
     for j := 0 to 15 do
     begin
-      NewRegister := Calculate(RegisterBefore, Instruction, j);
+      NewRegister := ModifyRegister(RegisterBefore, Instruction, j);
       if (NewRegister[0] = RegisterAfter[0]) and (NewRegister[1] = RegisterAfter[1]) and (NewRegister[2] = RegisterAfter[2]) and (NewRegister[3] = RegisterAfter[3]) then
         inc(SameResult);
     end;
@@ -1917,7 +1951,7 @@ begin
 
     for j := 0 to 15 do
     begin
-      NewRegister := Calculate(CurrentRegister, Instruction, j);
+      NewRegister := ModifyRegister(CurrentRegister, Instruction, j);
       if not ((NewRegister[0] = RegisterAfter[0]) and (NewRegister[1] = RegisterAfter[1]) and (NewRegister[2] = RegisterAfter[2]) and (NewRegister[3] = RegisterAfter[3])) then
         Mapping[Instruction.Id].Remove(j); //Instruction doesnt match result remove it from the mapping
     end;
@@ -1942,13 +1976,423 @@ begin
     if Finput[i] <> '' then
     begin
       Instruction := ReadRegisterInstruction(Finput[i]);
-      CurrentRegister := Calculate(CurrentRegister, Instruction, Mapping[Instruction.id][0]);
+      CurrentRegister := ModifyRegister(CurrentRegister, Instruction, Mapping[Instruction.id][0]);
     end;
   end;
 
   result := CurrentRegister[0]; //706
 end;
 {$ENDREGION}
+{$REGION 'TAdventOfCodeDay17'}
+procedure TAdventOfCodeDay17.BeforeSolve;
+Var Line: TStringList;
+    s: string;
+    i, j: Integer;
+    p: TPosition;
+begin
+  FClayGrid := TDictionary<TPosition, String>.Create;
+  FWaterGrid := TDictionary<TPosition, String>.Create;
+
+  FMaxY := -99999;
+
+  Line := TStringList.Create;
+  Line.Delimiter := ' ';
+  for j := 0 to FInput.Count -1 do
+  begin
+    s := StringReplace(FInput[j], '=', ' ', [rfReplaceAll]);
+    s := StringReplace(s, '..', ' ', [rfReplaceAll]);
+    s := StringReplace(s, ',', '', [rfReplaceAll]);
+    Line.DelimitedText := s;
+
+    if Line[0] = 'x' then
+    begin
+      p.x := StrToInt(Line[1]);
+      for i := StrToInt(Line[3]) to StrToInt(Line[4]) do
+      begin
+        p.y := i;
+        FClayGrid.AddOrSetValue(p, '#');
+      end;
+
+      if p.y > FMaxY then
+        FMaxY := p.y;
+    end
+    else if Line[0] = 'y' then
+    begin
+      p.y := StrToInt(Line[1]);
+
+      for i := StrToInt(Line[3]) to StrToInt(Line[4]) do
+      begin
+        p.x := i;
+        FClayGrid.AddOrSetValue(p, '#');
+      end;
+
+      if p.y > FMaxY then
+        FMaxY := p.y;
+    end;
+  end;
+
+  p.x := 500; p.y := 0;
+  FClayGrid.AddOrSetValue(p, '+');
+  LetWaterFall(p);
+  Print;
+end;
+
+procedure TAdventOfCodeDay17.AfterSolve;
+begin
+  FClayGrid.Free;
+  FWaterGrid.Free;
+end;
+
+procedure TAdventOfCodeDay17.Print;
+var Key: TPosition;
+    GridList: TStringList;
+    x, y, MinX, MaxX: Integer;
+    s: String;
+begin
+  MinX := 9999;
+  MaxX := -9999;
+
+  for Key in FWaterGrid.Keys do
+  begin //Dertermine gridsize
+    if Key.x > MaxX then MaxX := Key.x;
+    if Key.x < MinX then MinX := Key.x;
+  end;
+
+  GridList := TStringList.Create;
+  for y := 0 to FMaxY do
+  begin
+    s := '';
+    for x := MinX to MaxX do
+    begin
+      Key.x := x;
+      Key.y := y;
+      if FClayGrid.ContainsKey(Key) then
+        s := s + FClayGrid[Key]
+      else if FWaterGrid.ContainsKey(Key) then
+        s := s + FWaterGrid[Key]
+      else
+        s := s + '.';
+    end;
+    GridList.Add(s);
+  end;
+
+  S := StringReplace(Input, 'input17.txt', 'Solution17.txt', [rfIgnoreCase]);
+  GridList.SaveToFile(s);
+  GridList.Free;
+end;
+
+function TAdventOfCodeDay17.IsOverFlowing(StartPosition: TPosition; aDirection: Integer): boolean;
+begin
+  Result := False;
+  while True do
+  begin
+    StartPosition.x := StartPosition.x + aDirection;
+
+    if FClayGrid.ContainsKey(StartPosition) then //Hit clay, not overflowing
+      exit;
+
+    if FWaterGrid.ContainsKey(StartPosition) and (FWaterGrid[StartPosition] = '+') then //Hit falling water
+    begin
+      Result := True;
+      exit;
+    end
+  end;
+end;
+
+function TAdventOfCodeDay17.LetWaterFlow(StartPosition: TPosition; aDirection: Integer): boolean;
+var PosibleFall: TPosition;
+    Flow: Boolean;
+begin
+  Result := False;
+
+  Flow := True;
+  while Flow do
+  begin
+    Flow := False;
+    StartPosition.x := StartPosition.x + aDirection;
+
+    if (not FClayGrid.ContainsKey(StartPosition) and Not FWaterGrid.ContainsKey(StartPosition)) or (FWaterGrid.ContainsKey(StartPosition) and (FWaterGrid[StartPosition] ='|')) then
+    begin //Check if water can flow
+      FWaterGrid.AddOrSetValue(StartPosition, '-');
+      Flow := True;
+    end;
+
+    if Flow then //Check if this next flow can fall down
+    begin
+      PosibleFall := StartPosition;
+      PosibleFall.y := PosibleFall.y + 1;
+      if not FClayGrid.ContainsKey(PosibleFall) and Not FWaterGrid.ContainsKey(PosibleFall) then
+      begin
+        Flow := False;
+        Result := True;
+
+        FWaterGrid[StartPosition] := '+'; //Mark as a turning point
+        FWaterGrid.Add(PosibleFall, '|');
+        LetWaterFall(PosibleFall);
+      end;
+    end;
+  end;
+end;
+
+procedure TAdventOfCodeDay17.MarkStationaryWater(StartPosition: TPosition; aDirection: Integer);
+var Flow: Boolean;
+begin
+  Flow := True;
+  while Flow do
+  begin
+    StartPosition.x := StartPosition.x + aDirection;
+
+    if FClayGrid.ContainsKey(StartPosition) then
+      Flow := False
+    else if FWaterGrid.ContainsKey(StartPosition) then
+      FWaterGrid[StartPosition] := '~';
+  end;
+end;
+
+procedure TAdventOfCodeDay17.LetWaterFall(StartPosition: TPosition);
+var p: TPosition;
+    CanGoDown, CanGoDownLeft, CanGoDownRight: Boolean;
+begin
+  p := StartPosition;
+  p.y := p.y +1;
+  if p.y > FMaxY then Exit;
+  if (FWaterGrid.ContainsKey(p) and (FWaterGrid[p] = '+')) then Exit;
+
+  if (FWaterGrid.ContainsKey(p)) then //Hit Water, check for overflow
+  begin
+    if IsOverFlowing(p, 1) then Exit;
+    if IsOverFlowing(p, -1) then Exit;
+  end;
+
+//  p3 := StartPosition ;
+  if FClayGrid.ContainsKey(p) or FWaterGrid.ContainsKey(p) then // hit Clay or non overflowing water
+  begin
+    CanGoDown := False;
+    FWaterGrid[StartPosition] := '-'; //Set this position as flowing
+    while Not CanGoDown do
+    begin
+      CanGoDownLeft := LetWaterFlow(StartPosition, -1); //Flow Left
+      CanGoDownRight := LetWaterFlow(StartPosition, 1); //Flow Right
+
+      CanGoDown := CanGoDownLeft or CanGoDownRight;
+
+      if not CanGoDown then //Go up
+      begin
+        FWaterGrid.AddOrSetValue(StartPosition, '~'); //Mark stationary water
+        MarkStationaryWater(StartPosition, -1);
+        MarkStationaryWater(StartPosition, 1);
+
+        StartPosition.y := StartPosition.y - 1;
+        FWaterGrid.AddOrSetValue(StartPosition, '-');
+      end;
+    end;
+  end
+  else
+  begin
+    FWaterGrid.Add(p, '|'); //Continue falling
+    LetWaterFall(p);
+  end;
+end;
+
+function TAdventOfCodeDay17.SolveA: Variant;
+begin
+  Result := FWaterGrid.Count -4 ; //31158
+end;
+
+function TAdventOfCodeDay17.SolveB: Variant;
+var key: TPosition;
+begin
+  Result := 0;
+  for key in FWaterGrid.Keys do
+  begin
+    if FWaterGrid[key] = '~' then
+      Inc(result); //25419
+  end
+end;
+{$ENDREGION}
+{$REGION 'TAdventOfCodeDay18'}
+function TAdventOfCodeDay18.Solve(Const aItterationCount: integer): Integer;
+Var Grid: TDictionary<TPosition, String>;
+    Tempgrid: TDictionary<TPosition, String>;
+    x,y, i: Integer;
+    p: TPosition;
+    Tree, lumber: Integer;
+    s: string;
+
+  function GetField(aPosition: TPosition): string;
+  begin
+    Result := '';
+    if Grid.ContainsKey(aPosition) then
+      Result := Grid[aPosition];
+  end;
+
+  function GetPositions(aStartPosistion: TPosition): ForestPositions;
+  var p: TPosition;
+  begin
+    p := aStartPosistion; //Left
+    p.x := p.x - 1;
+    Result[0] := p;
+    p.y := p.y -1;
+    Result[1] := p;
+    p.y := p.y +2;
+    Result[2] := p;
+
+    p := aStartPosistion; //Right
+    p.x := p.x + 1;
+    Result[3] := p;
+    p.y := p.y -1;
+    Result[4] := p;
+    p.y := p.y +2;
+    Result[5] := p;
+
+    p := aStartPosistion; //Middle
+    p.y := p.y -1;
+    Result[6] := p;
+    p.y := p.y +2;
+    Result[7] := p;
+  end;
+
+  procedure Itterate;
+  var startposistion, p: TPosition;
+      Yard, Trees: Integer;
+      s: string;
+  begin
+    for startposistion in Grid.Keys do
+    begin
+      Yard := 0;
+      Trees := 0;
+
+      for p in GetPositions(startposistion) do
+      begin
+        s := GetField(p);
+        if s = '#' then Inc(yard);
+        if s = '|' then Inc(Trees);
+      end;
+
+      s := Grid[startposistion];
+      if (s = '.') and (Trees >= 3) then
+        s := '|'
+      else if (s = '|') and (Yard >= 3) then
+        s := '#'
+      else if (s = '#') and ((yard = 0) or (Trees = 0)) then
+        s := '.';
+
+      Tempgrid.AddOrSetValue(startposistion, s);
+    end;
+  end;
+
+begin
+  Grid := TDictionary<TPosition, String>.Create;
+  for y := 0 to FInput.Count -1 do
+    for x := 1 to Length(FInput[0]) do
+    begin
+      p.x := x-1; p.y := y;
+      Grid.Add(p, FInput[y][x]);
+    end;
+
+  Tempgrid := TDictionary<TPosition, String>.Create;
+  for i := 1 to aItterationCount  do
+  begin
+    Tempgrid.Clear;
+    Itterate;
+    Grid := TDictionary<TPosition, String>.Create(Tempgrid);
+  end;
+
+  Tree := 0;
+  lumber := 0;
+  for s in Grid.Values do
+  begin
+    if s = '|' then Inc(Tree);
+    if s = '#' then Inc(lumber);
+  end;
+
+  Result := Tree * lumber;
+  Tempgrid.Free;
+  Grid.Free;
+end;
+
+function TAdventOfCodeDay18.SolveA: Variant;
+begin
+  Result := Solve(10); //355918
+end;
+
+function TAdventOfCodeDay18.SolveB: Variant;
+begin
+  // 1000 iterations is engough, the patrn is repating
+  Result := Solve(1000); //202806
+end;
+{$ENDREGION}
+{$REGION 'TAdventOfCodeDay19'}
+procedure TAdventOfCodeDay19.RunProgram(const aMaxIterations: integer; var aRegisters: TRegister);
+const instructionPointer: Integer = 1;
+Var Instruction: TRegisterInstruction;
+    counter: Integer;
+
+  function ReadRegisterInstruction(const aInstruction: string): TRegisterInstruction;
+  var line: TStringList;
+  begin
+    Line := TstringList.Create;
+    Line.Delimiter := ' ';
+    Line.DelimitedText := aInstruction;
+
+    Result.id := IndexStr(line[0], ['addr','addi','mulr','muli','banr','bani','borr','bori','setr','seti','gtir','gtri','gtrr','eqir','eqri','eqrr']);
+    Result.ValueA := StrToInt(Line[1]);
+    Result.ValueB := StrToInt(Line[2]);
+    Result.ValueC := StrToInt(Line[3]);
+
+    line.Free;
+  end;
+
+begin
+  counter := 0;
+  while (Counter < aMaxIterations) or (aMaxIterations < 0)do
+  begin
+    Inc(counter);
+    Instruction := ReadRegisterInstruction(FInput[aRegisters[instructionPointer]]);
+
+    aRegisters := ModifyRegister(aRegisters, Instruction, Instruction.Id);
+    aRegisters[instructionPointer] := aRegisters[instructionPointer] + 1;
+
+    if aRegisters[instructionPointer] > FInput.count -1 then
+      Exit;
+  end;
+end;
+
+function TAdventOfCodeDay19.SolveA: Variant;
+Var Registers: TRegister;
+    i: Integer;
+begin
+  for i := 0 to 5 do
+    Registers[i] := 0;
+
+  RunProgram(-1, Registers);
+  Result := Registers[0] //2040
+end;
+
+function TAdventOfCodeDay19.SolveB: Variant;
+Var Registers: TRegister;
+    i :Integer;
+begin
+  for i := 0 to 5 do
+    Registers[i] := 0;
+
+  Registers[0] := 1;
+
+  RunProgram(20, Registers); //Goal of the program is to get the sum of the dividers in register 5, 20 iterations is enouogh
+
+  result := 0;
+  for i := 1 to Registers[5] do
+  begin
+    if (registers[5] mod i) = 0 then
+      Result := Result + i; //25165632
+  end;
+end;
+{$ENDREGION}
+
+//  Line := TstringList.Create;
+//  Line.Delimiter := ' ';
+//  Line.DelimitedText := s;
+
 
 {$REGION 'Blank'}
 //function TAdventOfCodeDay.SolveA: Variant;

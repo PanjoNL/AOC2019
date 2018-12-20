@@ -27,9 +27,9 @@ implementation
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  cbb1.ItemIndex := 16;
-  btnSolveClick(nil);
-  Application.Terminate;
+//  cbb1.ItemIndex := 19;
+//  btnSolveClick(nil);
+//  Application.Terminate;
 end;
 
 procedure TForm1.btnSolveClick(Sender: TObject);
@@ -57,6 +57,7 @@ begin
     16:AdventOfCode := TAdventOfCodeDay17.Create;
     17:AdventOfCode := TAdventOfCodeDay18.Create;
     18:AdventOfCode := TAdventOfCodeDay19.Create;
+    19:AdventOfCode := TAdventOfCodeDay20.Create;
   end;
 
   if Assigned(AdventOfCode) then

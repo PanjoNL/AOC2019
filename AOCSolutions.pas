@@ -10,6 +10,8 @@ uses
 type TPosition = record
   x: integer;
   y: Integer;
+  procedure SetIt(const aX, aY: integer);
+  function Copy(const aX, aY: integer): TPosition;
 end;
 
 type TGuard = record
@@ -246,6 +248,21 @@ type TAdventOfCodeDay19 = class(TAdventOfCode)
     procedure RunProgram(const aMaxIterations: integer; var aRegisters: TRegister);
 end;
 
+type TAdventOfCodeDay20 = class(TAdventOfCode)
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
+  private
+    FMap: TDictionary<TPosition, string>;
+    FDistances: TDictionary<TPosition, Integer>;
+    procedure PrintRooms;
+    procedure BuildRooms(aStartPosition: TPosition; var Instructions: String);
+    procedure CalculateDistance(aStartPosition: TPosition; Const Steps: integer); overload;
+    procedure CalculateDistance(aStartPosition: TPosition; Const Steps, X, Y: integer); overload;
+end;
+
 function ModifyRegister(Const aRegister: TRegister; aInput: TRegisterInstruction; InstuctionId: integer): TRegister;
 
 {$REGION 'Blank'}
@@ -259,7 +276,19 @@ function ModifyRegister(Const aRegister: TRegister; aInput: TRegisterInstruction
 {$ENDREGION}
 
 implementation
+{$REGION 'TPosistion'}
+procedure TPosition.SetIt(const aX: Integer; const aY: Integer);
+begin
+  x := aX;
+  y := aY;
+end;
 
+function TPosition.Copy(const aX, aY: integer): TPosition;
+begin
+  Result.x := x + aX;
+  Result.y := y + aY;
+end;
+{$ENDREGION}
 {$REGION 'TGuard'}
 procedure TGuard.Init;
 begin
@@ -538,8 +567,7 @@ begin
     for i := StartPosX to StartPosX + Widthx - 1 do
       for j := StartPosY to StartPosY + Heigthy - 1 do
       begin
-        position.x := i;
-        position.y := j;
+        position.SetIt(i, j);
         v := 0;
         if Grid.TryGetValue(position, v) then
           grid[position] := v+1
@@ -600,9 +628,7 @@ begin
   for i := X to X + width - 1 do
     for j := Y to Y + height - 1 do
     begin
-      Position.x := i;
-      Position.y := j;
-
+      Position.SetIt(i, j);
       if Grid.TryGetValue(Position, v) and (v > 1) then
       begin
         result := true;
@@ -808,12 +834,11 @@ begin
     line.DelimitedText := s;
     x := StrToInt(line[0]);
     y := StrToInt(line[1]);
-    if x > maxX then
-      maxX := x;
-    if y > MaxY then
-      MaxY := Y;
-    Position.x := x;
-    Position.y := y;
+
+    if x > maxX then maxX := x;
+    if y > MaxY then MaxY := Y;
+
+    Position.SetIt(x, y);
     points.Add(s, Position);
   end;
   line.Free;
@@ -1205,8 +1230,7 @@ begin
   for i := 0 to FInput.Count -1 do
   begin
     Line.DelimitedText := FInput[i];
-    Star.Position.X := StrToInt(Line[0]);
-    Star.Position.Y := StrToInt(Line[1]);
+    Star.Position.SetIt(StrToInt(Line[0]), StrToInt(Line[1]));
     Star.VelocityX := StrToInt(Line[2]);
     Star.VelocityY := StrToInt(Line[3]);
     Stars.Add(i, Star)
@@ -1223,8 +1247,7 @@ begin
     s := '';
     for i := minX to MaxX do
     begin
-      Position.x := i;
-      Position.y := j;
+      Position.SetIt(i, j);
       if Positions.Contains(Position) then
         s := s + '#'
       else
@@ -1262,8 +1285,7 @@ begin
   for x := 1 to 300 do
     for y := 1 to 300 do
     begin
-      position.x := x;
-      position.y := y;
+      position.SetIt(x, y);
       Fuel := x + 10;
       Fuel := Fuel * y;
       Fuel := Fuel + Input;
@@ -1283,8 +1305,7 @@ end;
 Function TAdventOfCodeDay11.GetFuelCell(const aX, aY: integer): integer;
 var position: TPosition;
 begin
-  position.x := aX;
-  position.y := aY;
+  position.SetIt(aX, aY);
   Result := FuelCells[position];
 end;
 
@@ -1404,7 +1425,7 @@ procedure TAdventOfCodeDay13.BeforeSolve;
 var Carts, TempCarts: TDictionary<TPosition, TCart>;
     Tracks: TDictionary<TPosition, String>;
     Cart: TCart;
-    Posistion, NewPosistion: TPosition;
+    Posistion, NewPosition: TPosition;
     Line, s: String;
     x, y, MaxX, MaxY: Integer;
 begin
@@ -1431,9 +1452,7 @@ begin
         s := Line[x];
         if s <> '' then
         begin
-          Posistion.X := x-1; //Spaces at the start of the input file :-(
-          Posistion.Y := y;
-
+          Posistion.SetIt(x-1, y);  // -1 Spaces at the start of the input file :-(
           Tracks.Add(Posistion, s);
           if (s='v') or (s='^') or (s='<') or (s='>') then
           begin
@@ -1450,8 +1469,7 @@ begin
       for y := 0 to MaxY do
         for x := 0 to MaxX do
         begin
-          Posistion.x := x;
-          Posistion.y := Y;
+          Posistion.SetIt(x, y);
           if Carts.ContainsKey(Posistion) then
           begin
             s := Tracks[Posistion];
@@ -1463,19 +1481,17 @@ begin
             if s = '+' then
               Cart.Crossing;
 
-            NewPosistion.X := Posistion.X + Cart.XSpeed;
-            NewPosistion.Y := Posistion.Y + Cart.YSpeed;
-
-            if TempCarts.ContainsKey(NewPosistion) or Carts.ContainsKey(NewPosistion) then //Crash
+            NewPosition.SetIt(Posistion.X + Cart.XSpeed, Posistion.Y + Cart.YSpeed);
+            if TempCarts.ContainsKey(NewPosition) or Carts.ContainsKey(NewPosition) then //Crash
             begin
-              TempCarts.Remove(NewPosistion); //Remove from already moved carts
-              Carts.Remove(NewPosistion); //And from car that still need to move
+              TempCarts.Remove(NewPosition); //Remove from already moved carts
+              Carts.Remove(NewPosition); //And from car that still need to move
 
               if FFirstCrash.X < 0 then
-                FFirstCrash := NewPosistion;
+                FFirstCrash := NewPosition;
             end
             else
-              TempCarts.Add(NewPosistion, Cart);
+              TempCarts.Add(NewPosition, Cart);
           end;
         end;
 
@@ -1623,20 +1639,11 @@ Var BattleGround: TDictionary<TPosition, Boolean>;
   End;
 
   function GetPositions(const aStartPosition: TPosition): TPositions;
-  var Position: TPosition;
   begin
-    Position := aStartPosition;
-    Position.y := Position.y -1; //Top
-    Result[0] := Position;
-    Position := aStartPosition;
-    Position.x := Position.x -1; //Left
-    Result[1] := Position;
-    Position := aStartPosition;
-    Position.x := Position.x +1; //Right
-    Result[2] := Position;
-    Position := aStartPosition;
-    Position.y := Position.y +1; //Bottem
-    Result[3] := Position;
+     Result[0] := aStartPosition.Copy(0, -1); //Top
+     Result[1] := aStartPosition.Copy(-1, 0); //Left
+     Result[2] := aStartPosition.Copy(1, 0);  //Right
+     Result[3] := aStartPosition.Copy(0, 1);  //Bottem
   end;
 
   function CanFight(const aPosistion: TPosition; aPlayerType: string; Var LocationToFight: TPosition): Boolean;
@@ -1714,7 +1721,7 @@ Var BattleGround: TDictionary<TPosition, Boolean>;
             begin
               if not BattleGround[p3] {not a wall} and not Players.ContainsKey(p3) {spot not taken} and (TestGrid[p3] = -1) then
               begin
-                TestGrid[p3] := i+1;
+                TestGrid[p3] := i +1;
                 PointAdded := True;
               end
             end
@@ -2031,7 +2038,7 @@ begin
     end;
   end;
 
-  p.x := 500; p.y := 0;
+  p.SetIt(500, 0);
   FClayGrid.AddOrSetValue(p, '+');
   LetWaterFall(p);
   Print;
@@ -2119,8 +2126,7 @@ begin
 
     if Flow then //Check if this next flow can fall down
     begin
-      PosibleFall := StartPosition;
-      PosibleFall.y := PosibleFall.y + 1;
+      PosibleFall := StartPosition.Copy(0, 1);
       if not FClayGrid.ContainsKey(PosibleFall) and Not FWaterGrid.ContainsKey(PosibleFall) then
       begin
         Flow := False;
@@ -2153,8 +2159,7 @@ procedure TAdventOfCodeDay17.LetWaterFall(StartPosition: TPosition);
 var p: TPosition;
     CanGoDown, CanGoDownLeft, CanGoDownRight: Boolean;
 begin
-  p := StartPosition;
-  p.y := p.y +1;
+  p := StartPosition.Copy(0, 1);
   if p.y > FMaxY then Exit;
   if (FWaterGrid.ContainsKey(p) and (FWaterGrid[p] = '+')) then Exit;
 
@@ -2164,7 +2169,6 @@ begin
     if IsOverFlowing(p, -1) then Exit;
   end;
 
-//  p3 := StartPosition ;
   if FClayGrid.ContainsKey(p) or FWaterGrid.ContainsKey(p) then // hit Clay or non overflowing water
   begin
     CanGoDown := False;
@@ -2227,29 +2231,15 @@ Var Grid: TDictionary<TPosition, String>;
   end;
 
   function GetPositions(aStartPosistion: TPosition): ForestPositions;
-  var p: TPosition;
   begin
-    p := aStartPosistion; //Left
-    p.x := p.x - 1;
-    Result[0] := p;
-    p.y := p.y -1;
-    Result[1] := p;
-    p.y := p.y +2;
-    Result[2] := p;
-
-    p := aStartPosistion; //Right
-    p.x := p.x + 1;
-    Result[3] := p;
-    p.y := p.y -1;
-    Result[4] := p;
-    p.y := p.y +2;
-    Result[5] := p;
-
-    p := aStartPosistion; //Middle
-    p.y := p.y -1;
-    Result[6] := p;
-    p.y := p.y +2;
-    Result[7] := p;
+    Result[0] := aStartPosistion.Copy(-1, -1); //Top left
+    Result[1] := aStartPosistion.Copy(-1, 0);  //Middle left
+    Result[2] := aStartPosistion.Copy(-1, 1);  //Bottem left
+    Result[3] := aStartPosistion.Copy(0, -1);  //Top middle
+    Result[4] := aStartPosistion.Copy(0, 1);   //Bottom middle
+    Result[5] := aStartPosistion.Copy(1, -1);  //Top right;
+    Result[6] := aStartPosistion.Copy(1, 0);   //Middle right
+    Result[7] := aStartPosistion.Copy(1, 1);   //bottom right
   end;
 
   procedure Itterate;
@@ -2388,16 +2378,175 @@ begin
   end;
 end;
 {$ENDREGION}
+{$REGION 'TAdventOfCodeDay20'}
+procedure TAdventOfCodeDay20.PrintRooms;
+var Key: TPosition;
+    GridList: TStringList;
+    x, y, MinX, MaxX, MinY, MaxY: Integer;
+    s: String;
+begin
+  MinX := 9999;
+  MaxX := -9999;
+  MinY := MinX;
+  MaxY := MaxX;
 
-//  Line := TstringList.Create;
-//  Line.Delimiter := ' ';
-//  Line.DelimitedText := s;
+  for Key in FMap.Keys do
+  begin //Dertermine gridsize
+    if Key.x > MaxX then MaxX := Key.x;
+    if Key.x < MinX then MinX := Key.x;
+    if Key.y > MaxY then MaxY := Key.y;
+    if Key.y < MinY then MinY := Key.y;
+  end;
+
+  GridList := TStringList.Create;
+  for y := MinY-1 to MaxY+1 do
+  begin
+    s := '';
+    for x := MinX-1 to MaxX+1 do
+    begin
+      Key.SetIt(x, y);
+      if FMap.ContainsKey(Key) then
+        s := s + FMap[Key]
+      else
+        s := s + ' ';
+    end;
+    GridList.Add(s);
+  end;
+
+  s := StringReplace(Input, 'input20.txt', 'Solution20.txt', [rfIgnoreCase]);
+  GridList.SaveToFile(s);
+  GridList.Free;
+end;
+
+procedure TAdventOfCodeDay20.BuildRooms(aStartPosition: TPosition; var Instructions: String);
+var s: string;
+    xSpeed, ySpeed: Integer;
+begin
+  if Length(Instructions) = 0 then Exit;
+
+  s := Instructions[1];
+  if (s = '$') or (s = ')') then Exit;
+
+  if s = '|' then
+  begin
+    Instructions := Instructions.Remove(0,1);
+    Exit;
+  end;
+
+  xSpeed := 0;
+  ySpeed := 0;
+  case IndexStr(s, ['N', 'E', 'S', 'W', '(']) of
+    0: ySpeed := -1;
+    1: xSpeed := 1;
+    2: ySpeed := 1;
+    3: xSpeed := -1;
+    4:begin //Upcoming choice
+        Instructions := Instructions.Remove(0,1);
+        while (Instructions[1] <> ')') do
+          BuildRooms(aStartPosition, Instructions);
+
+        Instructions := Instructions.Remove(0,1);
+        BuildRooms(aStartPosition, Instructions);
+        Exit;
+      end;
+  end;
+
+  aStartPosition := aStartPosition.Copy(xSpeed, ySpeed);
+  FMap.AddOrSetValue(aStartPosition, 'D'); //Mark Next position as door;
+
+  aStartPosition := aStartPosition.Copy(xSpeed, ySpeed);
+  FMap.AddOrSetValue(aStartPosition, '.'); //Mark as room
+  Instructions := Instructions.Remove(0,1);
+
+  BuildRooms(aStartPosition, Instructions);
+end;
+
+procedure TAdventOfCodeDay20.CalculateDistance(aStartPosition: TPosition; Const Steps: integer);
+begin
+  CalculateDistance(aStartPosition, Steps, 0, 1);
+  CalculateDistance(aStartPosition, Steps, 1, 0);
+  CalculateDistance(aStartPosition, Steps, 0, -1);
+  CalculateDistance(aStartPosition, Steps, -1, 0);
+end;
+
+procedure TAdventOfCodeDay20.CalculateDistance(aStartPosition: TPosition; Const Steps, X, Y: integer);
+begin
+  aStartPosition := aStartPosition.Copy(X, Y);
+  if FMap.ContainsKey(aStartPosition) then //This is a door
+  begin
+    aStartPosition := aStartPosition.Copy(X, Y);
+
+    if FDistances.ContainsKey(aStartPosition) then //Already visited;
+    begin
+      if FDistances[aStartPosition] > Steps +1 then //Check if this is a shorter path
+      begin
+        FDistances[aStartPosition] := Steps +1;
+        CalculateDistance(aStartPosition, Steps +1)
+      end;
+    end
+    else
+    begin
+      FDistances.Add(aStartPosition, Steps +1);
+      CalculateDistance(aStartPosition, Steps +1)
+    end;
+  end;
+end;
+
+procedure TAdventOfCodeDay20.BeforeSolve;
+var Insructions: string;
+    i: integer;
+    p: TPosition;
+begin
+  Insructions := ''; //Merge instuctions, string is way to long
+  for i := 0 to FInput.Count-1 do
+    Insructions := Insructions + Trim(FInput[i]);
+
+  FMap := TDictionary<TPosition, string>.Create;
+  FDistances := TDictionary<TPosition, Integer>.Create;
+
+  Insructions := Insructions.Remove(0,1); //remove first character
+
+  p.SetIt(0, 0); //Set startposition
+  FMap.Add(p, 'X');
+
+  BuildRooms(p, Insructions);
+  PrintRooms;
+
+  CalculateDistance(p, 0);
+end;
+
+procedure TAdventOfCodeDay20.AfterSolve;
+begin
+  FDistances.Free;
+  FMap.Free;
+end;
+
+function TAdventOfCodeDay20.SolveA: Variant;
+var Key: TPosition;
+begin
+  Result := 0;
+  for Key in FDistances.Keys do
+    if FDistances[Key] > Result then
+      Result := FDistances[Key]; //3502
+end;
+
+function TAdventOfCodeDay20.SolveB: Variant;
+var Key: TPosition;
+begin
+  Result := 0;
+  for Key in FDistances.Keys do
+    if FDistances[Key] >= 1000  then
+     inc(result); //8000
+end;
+{$ENDREGION}
 
 
 {$REGION 'Blank'}
 //function TAdventOfCodeDay.SolveA: Variant;
 //begin
-//
+//  Line := TstringList.Create;
+//  Line.Delimiter := ' ';
+//  Line.DelimitedText := s;
 //end;
 //
 //function TAdventOfCodeDay.SolveB: Variant;

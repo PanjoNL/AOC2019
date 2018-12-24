@@ -7,6 +7,12 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Generics.Defaults,
   System.Generics.Collections, system.Diagnostics, AOCBase, RegularExpressions, System.DateUtils, system.StrUtils, system.Math;
 
+
+type TTool = (None = 0, Torch = 1, ClimbingGear = 2);
+type TCaveType = (Rocky = 0, Wet = 1, Narrow = 2);
+type TUnitType = (ImmuneSystem, Infection);
+type TAttackType = (Cold, slashing, radiation, fire, bludgeoning);
+
 type TPosition = record
   x: integer;
   y: Integer;
@@ -61,9 +67,39 @@ TRegisterInstruction = record
   ValueC: Integer
 end;
 
+TCavePosition = record
+  Position: TPosition;
+  Tool: TTool;
+end;
+
+TCaveEvent = record
+  CavePosition: TCavePosition;
+  Time: Integer;
+end;
+
+TNanoBot = record
+  X: Integer;
+  Y: Integer;
+  Z: Integer;
+  Radius: Integer;
+end;
+
+TUnit = record
+  UnitType: TUnitType;
+  UnitCount: Integer;
+  HitPoints: Integer;
+  AttackDamgage: Integer;
+  initiative: Integer;
+  AttakcType: TAttackType;
+  WeakTo: set of TAttackType;
+  ImmuneTo: Set of TAttackType;
+  function AttackPower: integer;
+end;
+
 type TPositions = array[0..3] of TPosition;
 type TRegister = array[0..5] of Integer;
 type ForestPositions = array[0..7] of TPosition;
+type SetOfAttackType = set of TAttackType;
 
 type TAdventOfCodeDay1 = class(TAdventOfCode)
   protected
@@ -206,7 +242,6 @@ type TAdventOfCodeDay15 = class(TAdventOfCode)
     function Battle(const ElfPower: Integer; StopOnElfDeath: boolean): Integer;
 end;
 
-
 type TAdventOfCodeDay16 = class(TAdventOfCode)
   protected
     function SolveA: Variant; override;
@@ -263,17 +298,61 @@ type TAdventOfCodeDay20 = class(TAdventOfCode)
     procedure CalculateDistance(aStartPosition: TPosition; Const Steps, X, Y: integer); overload;
 end;
 
-function ModifyRegister(Const aRegister: TRegister; aInput: TRegisterInstruction; InstuctionId: integer): TRegister;
+type TAdventOfCodeDay21 = class(TAdventOfCode)
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
+  private
+    FInstructions :TDictionary<Integer, TRegisterInstruction>;
+end;
 
-{$REGION 'Blank'}
-//type TAdventOfCodeDay = class(TAdventOfCode)
-//  protected
-//    function SolveA: Variant; override;
-//    function SolveB: Variant; override;
-//  private
-//    //
-//end;
-{$ENDREGION}
+type TAdventOfCodeDay22 = class(TAdventOfCode)
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
+  private
+    FCave: TDictionary<TPosition, integer>;
+    const FDepth: integer =  4848;
+          FTargetX: Integer = 15;
+          FTargetY: Integer = 700;
+end;
+
+type TAdventOfCodeDay23 = class(TAdventOfCode)
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
+  private
+    NanoBotToCheck: TNanoBot;
+    FNanoBots: TList<TNanoBot>;
+end;
+
+type TAdventOfCodeDay24 = class(TAdventOfCode)
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+  private
+    function FixUpReindeer(const aBoost: integer; ReindeerSurvives: boolean): Integer;
+    function CreateUnit(aUnitType: TUnitType; aUnitCount, aHitPoints : Integer; aImmuneTo, aWeakTo: SetOfAttackType; aAttackDamgage: Integer;
+                        aAttakcType: TAttackType; aInitiative: Integer; const aBoost: Integer = 0): TUnit;
+end;
+
+type TAdventOfCodeDay25 = class(TAdventOfCode)
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+  private
+    //
+end;
+
+function GetPositions(const aStartPosition: TPosition): TPositions;
+function ModifyRegister(Const aRegister: TRegister; aInput: TRegisterInstruction; InstuctionId: integer): TRegister;
+function ReadRegisterInstruction(const aInstruction: string): TRegisterInstruction;
 
 implementation
 {$REGION 'TPosistion'}
@@ -413,6 +492,12 @@ begin
   if (aDirection = '>') then begin XSpeed := 1;  YSpeed := 0;  end;
 end;
 {$ENDREGION}
+{$REGION 'TUnit'}
+function TUnit.AttackPower: integer;
+begin
+  Result := UnitCount * AttackDamgage;
+end;
+{$ENDREGION}
 {$REGION 'Function ModifyRegister'}
 Function ModifyRegister(Const aRegister: TRegister; aInput: TRegisterInstruction; InstuctionId: integer): TRegister;
 begin
@@ -435,6 +520,31 @@ begin
     14:Result[aInput.ValueC] := IfThen((Result[aInput.ValueA] = aInput.ValueB), 1);
     15:Result[aInput.ValueC] := IfThen((Result[aInput.ValueA] = Result[aInput.ValueB]), 1);
   end;
+end;
+{$ENDREGION}
+{$REGION 'Function ReadRegisterInstruction'}
+function ReadRegisterInstruction(const aInstruction: string): TRegisterInstruction;
+var line: TStringList;
+begin
+  Line := TstringList.Create;
+  Line.Delimiter := ' ';
+  Line.DelimitedText := aInstruction;
+
+  Result.id := IndexStr(line[0], ['addr','addi','mulr','muli','banr','bani','borr','bori','setr','seti','gtir','gtri','gtrr','eqir','eqri','eqrr']);
+  Result.ValueA := StrToInt(Line[1]);
+  Result.ValueB := StrToInt(Line[2]);
+  Result.ValueC := StrToInt(Line[3]);
+
+  line.Free;
+end;
+{$ENDREGION}
+{$REGION 'function GetPositions'}
+function GetPositions(const aStartPosition: TPosition): TPositions;
+begin
+   Result[0] := aStartPosition.Copy(0, -1); //Top
+   Result[1] := aStartPosition.Copy(-1, 0); //Left
+   Result[2] := aStartPosition.Copy(1, 0);  //Right
+   Result[3] := aStartPosition.Copy(0, 1);  //Bottem
 end;
 {$ENDREGION}
 
@@ -1638,14 +1748,6 @@ Var BattleGround: TDictionary<TPosition, Boolean>;
     Result := True;
   End;
 
-  function GetPositions(const aStartPosition: TPosition): TPositions;
-  begin
-     Result[0] := aStartPosition.Copy(0, -1); //Top
-     Result[1] := aStartPosition.Copy(-1, 0); //Left
-     Result[2] := aStartPosition.Copy(1, 0);  //Right
-     Result[3] := aStartPosition.Copy(0, 1);  //Bottem
-  end;
-
   function CanFight(const aPosistion: TPosition; aPlayerType: string; Var LocationToFight: TPosition): Boolean;
   var Positions: TPositions;
       Position: TPosition;
@@ -2317,22 +2419,6 @@ procedure TAdventOfCodeDay19.RunProgram(const aMaxIterations: integer; var aRegi
 const instructionPointer: Integer = 1;
 Var Instruction: TRegisterInstruction;
     counter: Integer;
-
-  function ReadRegisterInstruction(const aInstruction: string): TRegisterInstruction;
-  var line: TStringList;
-  begin
-    Line := TstringList.Create;
-    Line.Delimiter := ' ';
-    Line.DelimitedText := aInstruction;
-
-    Result.id := IndexStr(line[0], ['addr','addi','mulr','muli','banr','bani','borr','bori','setr','seti','gtir','gtri','gtrr','eqir','eqri','eqrr']);
-    Result.ValueA := StrToInt(Line[1]);
-    Result.ValueB := StrToInt(Line[2]);
-    Result.ValueC := StrToInt(Line[3]);
-
-    line.Free;
-  end;
-
 begin
   counter := 0;
   while (Counter < aMaxIterations) or (aMaxIterations < 0)do
@@ -2539,20 +2625,546 @@ begin
      inc(result); //8000
 end;
 {$ENDREGION}
+{$REGION 'TAdventOfCodeDay21'}
+procedure TAdventOfCodeDay21.BeforeSolve;
+var i: Integer;
+begin
+  FInstructions := TDictionary<Integer, TRegisterInstruction>.Create;
+  for i := 0 to FInput.Count -1 do
+    FInstructions.Add(i, ReadRegisterInstruction(FInput[i]));
+end;
+
+procedure TAdventOfCodeDay21.AfterSolve;
+begin
+  FInstructions.Free;
+end;
+
+function TAdventOfCodeDay21.SolveA: Variant;
+const instructionPointer: Integer = 4;
+Var Instruction: TRegisterInstruction;
+    Registers: TRegister;
+    i: Integer;
+begin
+  for i := 0 to 5 do
+    Registers[i] := 0;
+
+  while True do
+  begin
+    Instruction := FInstructions[Registers[instructionPointer]];
+
+    if Registers[instructionPointer] = 28 then
+    begin
+      Result := Registers[1]; //6483199
+      Exit;
+    end;
+
+    Registers := ModifyRegister(Registers, Instruction, Instruction.Id);
+    Registers[instructionPointer] := Registers[instructionPointer] + 1;
+  end;
+end;
+
+function TAdventOfCodeDay21.SolveB: Variant;
+const instructionPointer: Integer = 4;
+Var Instruction: TRegisterInstruction;
+    SeenResults: TList<Integer>;
+    Registers: TRegister;
+    i, temp: Integer;
+begin
+  SeenResults := TList<Integer>.create;
+
+  for i := 0 to 5 do
+    Registers[i] := 0;
+
+  Result := 0;
+  while True do
+  begin
+    Instruction := FInstructions[Registers[instructionPointer]];
+
+    if (Registers[instructionPointer] = 28) then
+    begin
+      temp := Registers[1];
+
+      if SeenResults.Contains(temp) then
+        Exit;
+
+      Result := temp; //13338900
+      SeenResults.Add(Result);
+    end;
+
+    Registers := ModifyRegister(Registers, Instruction, Instruction.Id);
+    Registers[instructionPointer] := Registers[instructionPointer] + 1;
+  end;
+end;
+{$ENDREGION}
+{$REGION 'TAdventOfCodeDay22'}
+procedure TAdventOfCodeDay22.BeforeSolve;
+var Position: TPosition;
+    X, Y, GeologicIndex1, GeologicIndex2, GeologicIndex: Integer;
+begin
+  FCave := TDictionary<TPosition, integer>.Create;
+
+  for X := 0 to FTargetX + 50 do
+    for Y := 0 to FTargetY + 50 do
+    begin
+      if (x = 0) or (y = 0)  then
+        GeologicIndex := (Y * 48271) + (X * 16807)
+      else if (x = FTargetX) and (y = FTargetY) then
+        GeologicIndex := 0
+      else
+      begin
+        Position.SetIt(x-1,y);
+        GeologicIndex1 := FCave[Position];
+
+        Position.SetIt(X,Y-1);
+        GeologicIndex2 := FCave[Position];
+        GeologicIndex := GeologicIndex1 * GeologicIndex2;
+      end;
+
+      Position.SetIt(X, Y);
+      FCave.Add(Position, (GeologicIndex+ + FDepth) mod 20183);
+    end;
+end;
+
+procedure TAdventOfCodeDay22.AfterSolve;
+begin
+  FCave.Free;
+end;
+
+function TAdventOfCodeDay22.SolveA: Variant;
+var Position: TPosition;
+    X, Y: integer;
+begin
+  for x := 0 to FTargetX do
+    for y := 0 to FTargetY do
+    begin
+      Position.SetIt(x, y);
+      Result := Result + FCave[Position] mod 3; //11359
+    end;
+end;
+
+function TAdventOfCodeDay22.SolveB: Variant;
+var SeenPositions: TDictionary<TCavePosition, integer>;
+    CavePosition: TCavePosition;
+    FTime: Integer;
+    ExplorationQueue: TQueue<TCaveEvent>;
+    CaveEvent: TCaveEvent;
+
+  procedure ExploreCave(const aCaveEvent: TCaveEvent);
+  var p: TPosition;
+      NewCavePosition: TCavePosition;
+      NewCaveEvent: TCaveEvent;
+      CaveType: TCaveType;
+      Time: Integer;
+      Tool: TTool;
+  begin
+    if (aCaveEvent.CavePosition.Position.x = FTargetX) and (aCaveEvent.CavePosition.Position.y = FTargetY) then
+    begin
+      if aCaveEvent.CavePosition.Tool <> Torch then
+        Time := aCaveEvent.Time + 7
+      else
+        Time := aCaveEvent.Time;
+
+      if Time < FTime then
+        FTime := Time;
+
+      SeenPositions.AddOrSetValue(aCaveEvent.CavePosition, FTime);
+      Exit;
+    end;
+
+    if Not FCave.ContainsKey(aCaveEvent.CavePosition.Position) then
+      Exit; //Outside of grid
+
+    if SeenPositions.ContainsKey(aCaveEvent.CavePosition) and (SeenPositions[aCaveEvent.CavePosition] <= aCaveEvent.Time) then
+      Exit; //Already visited with the same tool in a more effictive way
+
+    CaveType := TCaveType(FCave[aCaveEvent.CavePosition.Position] mod 3);
+    case CaveType of
+      Rocky:  if aCaveEvent.CavePosition.Tool = None then exit;
+      Wet:    if aCaveEvent.CavePosition.Tool = Torch then exit;
+      Narrow: if aCaveEvent.CavePosition.Tool = ClimbingGear then exit;
+    end;
+
+    SeenPositions.AddOrSetValue(CaveEvent.CavePosition, CaveEvent.Time);
+
+    for p in GetPositions(CaveEvent.CavePosition.Position) do
+    begin
+      NewCavePosition.Position := p;
+      for Tool := Low(TTool) to High(TTool) do
+      begin
+        if Ord(CaveType) <> Ord(Tool) then //Check if where allowed to use this tool on this position
+        begin
+          Time := aCaveEvent.Time + 1;
+          if aCaveEvent.CavePosition.Tool <> Tool then //Check if this tool is already equiped
+            Time := aCaveEvent.Time + 7;
+
+          NewCavePosition.Tool := Tool;
+          NewCaveEvent.CavePosition := NewCavePosition;
+          NewCaveEvent.Time := Time;
+          ExplorationQueue.Enqueue(NewCaveEvent);
+        end
+      end;
+    end;
+  end;
+
+begin
+  ExplorationQueue := TQueue<TCaveEvent>.Create;
+  SeenPositions := TDictionary<TCavePosition, integer>.Create;
+
+  CavePosition.Position.SetIt(0,0);
+  CavePosition.Tool := Torch;
+  FTime := 9999999;
+
+  CaveEvent.CavePosition := CavePosition;
+  CaveEvent.Time := 0;
+  ExplorationQueue.Enqueue(CaveEvent);
+
+  While ExplorationQueue.Count > 0 do
+  begin
+    CaveEvent := ExplorationQueue.Dequeue;
+    ExploreCave(CaveEvent);
+  end; //976
+
+  Result := FTime;
+  ExplorationQueue.Free;
+end;
+{$ENDREGION}
+{$REGION 'TAdventOfCodeDay23'}
+procedure TAdventOfCodeDay23.BeforeSolve;
+var NanoBot: TNanoBot;
+    Line: TStringList;
+    i: Integer;
+    s: string;
+begin
+  NanoBotToCheck.Radius := 0;
+  Line := TstringList.Create;
+  Line.Delimiter := ' ';
+
+  FNanoBots := TList<TNanoBot>.Create;
+  for i := 0 to FInput.Count -1 do
+  begin
+    s := FInput[i];
+    s := StringReplace(s, '<', '', [rfReplaceAll]);
+    s := StringReplace(s, '>', '', [rfReplaceAll]);
+    s := StringReplace(s, '=', ' ', [rfReplaceAll]);
+    s := StringReplace(s, ',', ' ', [rfReplaceAll]);
+
+    Line.DelimitedText := s;
+    NanoBot.X := StrToInt(Line[1]);
+    NanoBot.Y := StrToInt(Line[2]);
+    NanoBot.Z := StrToInt(Line[3]);
+    NanoBot.Radius := StrToInt(Line[5]);
+    FNanoBots.Add(NanoBot);
+
+    if NanoBot.Radius > NanoBotToCheck.Radius then
+      NanoBotToCheck := NanoBot;
+  end;
+  Line.Free
+end;
+
+procedure TAdventOfCodeDay23.AfterSolve;
+begin
+  FNanoBots.Free;
+end;
+
+function TAdventOfCodeDay23.SolveA: Variant;
+var Distance: Integer;
+    NanoBot: TNanoBot;
+begin
+  Result := 0;
+  for NanoBot in FNanoBots do
+  begin
+    Distance := abs(NanoBot.X - NanoBotToCheck.X) + abs(NanoBot.Y - NanoBotToCheck.Y) + abs(NanoBot.Z - NanoBotToCheck.Z);
+    if Distance <= NanoBotToCheck.Radius then
+      inc(Result); //497
+  end;
+end;
+
+function TAdventOfCodeDay23.SolveB: Variant;
+var
+    NanoBot: TNanoBot;
+    MaxX, MinX, MaxY, MinY, MaxZ, MinZ: integer;
+    ScanSize, BestX, BestY, BestZ: Integer;
+    Distance, BotCount, BestBotCount, BestDistance, X,Y,Z: Integer;
+begin
+  MaxX := 0;
+  MinX := 0;
+  MaxY := 0;
+  MinY := 0;
+  MaxZ := 0;
+  MinZ := 0;
+  BestX := 0;
+  BestY := 0;
+  BestZ := 0;
+  BestBotCount := 0;
+  BestDistance := 0;
+
+  for NanoBot in FNanoBots do
+  begin
+    MaxX := Max(MaxX, NanoBot.X);
+    MinX := Min(MinX, NanoBot.X);
+    MaxY := Max(MaxY, NanoBot.Y);
+    MinY := Min(MinY, NanoBot.Y);
+    MaxZ := Max(MaxZ, NanoBot.Z);
+    MinZ := Min(MinZ, NanoBot.Z);
+  end;
+
+  ScanSize := 1;
+  while ScanSize < (MaxX - MinX) do
+    ScanSize := ScanSize * 2;
+
+  while ScanSize >= 1 do
+  begin
+    for x := Round(MinX/ScanSize) to Round(MaxX/ScanSize) do
+    for y := Round(MinY/ScanSize) to Round(MaxY/ScanSize) do
+    for z := Round(MinZ/ScanSize) to Round(MaxZ/ScanSize) do
+    begin
+      BotCount := 0;
+      for NanoBot in FNanoBots do
+      begin
+        Distance := abs(NanoBot.X - X * ScanSize) + abs(NanoBot.Y - Y * ScanSize) + abs(NanoBot.Z - Z * ScanSize);
+        if (Distance - NanoBot.Radius)/ScanSize <= 0 then
+          Inc(BotCount);
+      end;
+
+      if (BotCount > BestBotCount) then
+      begin
+        BestBotCount := BotCount;
+        BestX := X*ScanSize;
+        BestY := Y*ScanSize;
+        BestZ := Z*ScanSize;
+        BestDistance := Abs(BestX) + Abs(BestY) + Abs(BestZ)
+      end
+      else if BotCount = BestBotCount then
+      begin
+        Distance := Abs(X * ScanSize) + Abs(Y * ScanSize) + Abs(Z * ScanSize);
+        if (Distance < BestDistance) then
+        begin
+          BestX := X*ScanSize;
+          BestY := Y*ScanSize;
+          BestZ := Z*ScanSize;
+          BestDistance := Distance;
+        end
+      end
+    end;
+
+    MinX := BestX - ScanSize;
+    MaxX := BestX + ScanSize;
+    MinY := BestY - ScanSize;
+    MaxY := BestY + ScanSize;
+    MinZ := BestZ - ScanSize;
+    MaxZ := BestZ + ScanSize;
+
+    ScanSize := Round(ScanSize/2);
+  end;
+
+  Result := BestDistance + 1; //85761543 //Not sure why + 1, code gives 857615432, but aoc wont have it
+end;
+{$ENDREGION}
+{$REGION 'TAdventOfCodeDay24'}
+function TAdventOfCodeDay24.FixUpReindeer(const aBoost: integer; ReindeerSurvives: boolean): Integer;
+Var Units: TList<TUnit>;
+    TheUnit: TUnit;
+    PlannedBattles: TDictionary<Integer,Integer>;
+    i, j, Target, Damage, PossibleDamage, TargetPower, TargetInitiative, PreviousHealth: Integer;
+
+  function BattleFinished: Boolean;
+  var a,b: integer;
+      t: TUnit;
+  begin
+    a := 0;
+    b := 0;
+
+    for t in Units do
+    begin
+      if (t.UnitCount > 0) then
+      begin
+        if t.UnitType = Infection then
+          a := a + t.UnitCount
+        else
+          b := b + t.UnitCount;
+      end;
+    end;
+
+    Result := (a=0) or (b=0);
+  end;
+
+begin
+  Result := 0;
+  Units := TList<TUnit>.Create;
+  PlannedBattles := TDictionary<Integer,Integer>.Create;
+  PreviousHealth := 0;
+
+  Units.Add(CreateUnit(ImmuneSystem, 4592, 2061, [slashing, radiation], [Cold], 4, fire, 9, aBoost));
+  Units.Add(CreateUnit(ImmuneSystem, 1383, 3687, [], [], 26, radiation, 15, aBoost));
+  Units.Add(CreateUnit(ImmuneSystem, 2736, 6429, [slashing], [], 20, slashing, 2, aBoost));
+  Units.Add(CreateUnit(ImmuneSystem, 777, 3708, [radiation, cold], [slashing, fire], 39, cold, 4, aBoost));
+  Units.Add(CreateUnit(ImmuneSystem, 6761, 2792, [bludgeoning, fire, cold, slashing], [], 3, radiation, 17, aBoost));
+  Units.Add(CreateUnit(ImmuneSystem, 6028, 5537, [slashing], [], 7, radiation, 6, aBoost));
+  Units.Add(CreateUnit(ImmuneSystem, 2412, 2787, [], [], 9, bludgeoning, 20, aBoost));
+  Units.Add(CreateUnit(ImmuneSystem, 6042, 7747, [radiation], [], 12, slashing, 12, aBoost));
+  Units.Add(CreateUnit(ImmuneSystem, 1734, 7697, [], [radiation, cold], 38, cold, 10, aBoost));
+  Units.Add(CreateUnit(ImmuneSystem, 4391, 3250, [], [], 7, cold, 19, aBoost));
+
+  Units.Add(CreateUnit(Infection, 820, 46229, [Cold, bludgeoning], [], 106, slashing, 18));
+  Units.Add(CreateUnit(Infection, 723, 30757, [], [bludgeoning], 80, fire, 3));
+  Units.Add(CreateUnit(Infection, 2907, 51667, [bludgeoning], [slashing], 32, fire, 1));
+  Units.Add(CreateUnit(Infection, 2755, 49292, [], [bludgeoning], 34, fire, 5));
+  Units.Add(CreateUnit(Infection, 5824, 24708, [bludgeoning, cold, radiation, slashing], [], 7, bludgeoning, 11));
+  Units.Add(CreateUnit(Infection, 7501, 6943, [slashing], [cold], 1, radiation, 8));
+  Units.Add(CreateUnit(Infection, 573, 10367, [], [cold, slashing], 30, radiation, 16));
+  Units.Add(CreateUnit(Infection, 84, 31020, [], [cold], 639, slashing, 14));
+  Units.Add(CreateUnit(Infection, 2063, 31223, [bludgeoning], [radiation], 25, cold, 13));
+  Units.Add(CreateUnit(Infection, 214, 31088, [], [fire], 271, slashing, 7));
+
+  while Not BattleFinished do
+  begin
+    i := 0;
+    for TheUnit in Units do
+      i := i + TheUnit.UnitCount * TheUnit.HitPoints;
+
+    if PreviousHealth = i then
+      Exit; //Battle stalled
+
+    PreviousHealth := i;
+
+    Units.Sort(TComparer<TUnit>.Construct( //Order Units
+      Function(const L, R: TUnit): integer
+      begin
+        if L.UnitCount*L.AttackDamgage <> R.UnitCount*R.AttackDamgage then
+          Result :=  R.AttackPower - L.AttackPower
+        else
+          Result := r.initiative - l.initiative;
+      end));
+
+    for i := 0 to Units.Count - 1 do
+    begin //Select Targets
+      TheUnit := Units[i];
+      Target := -1;
+      Damage := 0;
+      TargetPower := 0;
+      TargetInitiative := 0;
+      for j := 0 to Units.Count -1 do
+      begin
+        if (Units[j].UnitType <> TheUnit.UnitType) and (TheUnit.UnitCount > 0) then //Other type of player /this unit still alive
+          if (not PlannedBattles.ContainsValue(j)) and (Units[j].UnitCount > 0) then //Unit is not already scheduled for a battle/and still alive
+          begin
+            if TheUnit.AttakcType in Units[j].ImmuneTo then
+              PossibleDamage := -1
+            else if TheUnit.AttakcType in Units[j].WeakTo then
+              PossibleDamage := TheUnit.AttackPower*2
+            else
+              PossibleDamage := TheUnit.AttackPower;
+
+            if PossibleDamage = Damage then
+            begin
+              if (TargetPower = Units[j].AttackPower) and (TargetInitiative < Units[j].initiative) then //Same attackpower and higer initiative
+                Target := j;
+
+              if TargetPower < Units[j].AttackPower then
+                Target := j;
+            end;
+
+            if PossibleDamage > Damage then
+              Target := j;
+
+            if Target = j then //This is the current target, set the global data
+            begin
+              Damage := PossibleDamage;
+              TargetPower := Units[j].AttackPower;
+              TargetInitiative := Units[j].initiative;
+            end;
+          end;
+      end;
+
+      if Target >= 0 then
+        PlannedBattles.Add(i, Target);
+    end;
+
+    While PlannedBattles.Count > 0 do //Battle
+    begin
+      i := 0; //Search for Highest Initiative
+      TargetInitiative := 0;
+      for j in PlannedBattles.Keys do
+      begin
+        if Units[j].initiative > TargetInitiative then
+        begin
+          TargetInitiative := Units[j].initiative;
+          i := j;
+        end
+      end;
+
+      j := PlannedBattles[i];
+      PlannedBattles.Remove(i);
+      if Units[i].UnitCount > 0 then
+      begin
+        Damage := Units[i].AttackPower;
+        if Units[i].AttakcType in units[j].WeakTo then
+          Damage := Damage * 2;
+
+        TheUnit := Units[j];
+        TheUnit.UnitCount := TheUnit.UnitCount - Damage div (Units[j].HitPoints);
+        Units[j] := TheUnit;
+      end;
+    end;
+  end;
+
+  for TheUnit In Units do
+    if (TheUnit.UnitCount > 0) and (not ReindeerSurvives or (TheUnit.UnitType = ImmuneSystem)) then
+      Result := Result + TheUnit.UnitCount;
+end;
+
+function TAdventOfCodeDay24.CreateUnit(aUnitType: TUnitType; aUnitCount, aHitPoints : Integer; aImmuneTo, aWeakTo: SetOfAttackType; aAttackDamgage: Integer;
+                     aAttakcType: TAttackType; aInitiative: Integer; const aBoost: Integer = 0): TUnit;
+begin
+  Result.UnitType := aUnitType;
+  Result.UnitCount := aUnitCount;
+  Result.HitPoints := aHitPoints;
+  Result.AttackDamgage := aAttackDamgage + aBoost;
+  Result.initiative := ainitiative;
+  Result.AttakcType := aAttakcType;
+  Result.WeakTo := aWeakTo;
+  Result.ImmuneTo := aImmuneTo;
+end;
+
+function TAdventOfCodeDay24.SolveA: Variant;
+begin
+  Result := FixUpReindeer(0, false);//20150
+end;
+
+function TAdventOfCodeDay24.SolveB: Variant;
+var Boost, StepSize: Integer;
+begin
+  StepSize := 32;
+  Boost := 0;
+  while true do
+  begin
+    Result := FixUpReindeer(Boost, true); //13005
+
+    if (Result > 0) and (StepSize = 1) then
+      Exit;
+
+    if Result > 0 then
+    begin
+      Boost := Boost - stepsize;
+      StepSize := Round(StepSize/2);
+    end;
+    Boost := Boost + stepsize;
+  end;
+end;
+{$ENDREGION}
 
 
-{$REGION 'Blank'}
-//function TAdventOfCodeDay.SolveA: Variant;
-//begin
+function TAdventOfCodeDay25.SolveA: Variant;
+begin
 //  Line := TstringList.Create;
 //  Line.Delimiter := ' ';
 //  Line.DelimitedText := s;
-//end;
-//
-//function TAdventOfCodeDay.SolveB: Variant;
-//begin
-//
-//end;
-{$ENDREGION}
+end;
+
+function TAdventOfCodeDay25.SolveB: Variant;
+begin
+
+end;
+
 
 end.

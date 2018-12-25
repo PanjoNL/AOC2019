@@ -27,7 +27,7 @@ implementation
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  cbb1.ItemIndex := 23;
+  cbb1.ItemIndex := 24;
   btnSolveClick(nil);
   Application.Terminate;
 end;

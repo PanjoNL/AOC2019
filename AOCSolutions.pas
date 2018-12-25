@@ -96,6 +96,14 @@ TUnit = record
   function AttackPower: integer;
 end;
 
+TPosition4 = record
+  a: Integer;
+  b: Integer;
+  c: Integer;
+  d: Integer;
+  Procedure SetIt(const aA, aB, aC, aD: integer);
+end;
+
 type TPositions = array[0..3] of TPosition;
 type TRegister = array[0..5] of Integer;
 type ForestPositions = array[0..7] of TPosition;
@@ -498,6 +506,15 @@ begin
   Result := UnitCount * AttackDamgage;
 end;
 {$ENDREGION}
+{$REGION 'TPosition4'}
+Procedure TPosition4.SetIt(const aA, aB, aC, aD: integer);
+begin
+  a := aA;
+  b := aB;
+  c := aC;
+  d := aD;
+end;
+{$ENDREGION}
 {$REGION 'Function ModifyRegister'}
 Function ModifyRegister(Const aRegister: TRegister; aInput: TRegisterInstruction; InstuctionId: integer): TRegister;
 begin
@@ -554,7 +571,7 @@ Var s: string;
 begin
   Result := 0;
   for s in FInput do
-    Result := Result + StrToInt(s);
+    Result := Result + StrToInt(s); //406
 end;
 
 function TAdventOfCodeDay1.SolveB: Variant;
@@ -562,23 +579,22 @@ var frequency, i: Integer;
     frequencys: TDictionary<Integer, string>;
 Begin
   frequency := 0;
-  i := 0;
 
   frequencys := TDictionary<Integer, string>.Create;
   while true do
   begin
-    frequency := frequency + StrToInt(FInput[i]);
-
-    if frequencys.ContainsKey(frequency) then
+    for i := 0 to FInput.Count -1 do
     begin
-      result := frequency;
-      Exit;
-    end;
 
-    frequencys.Add(frequency, '');
-    i := i + 1;
-    if i >= FInput.count then
-      i := 0;
+      frequency := frequency + StrToInt(FInput[i]);
+
+      if frequencys.ContainsKey(frequency) then
+      begin
+        result := frequency; //312
+        Exit;
+      end;
+      frequencys.Add(frequency, '');
+    end;
   end;
 
   frequencys.Free;
@@ -1111,7 +1127,7 @@ end;
 
 function TAdventOfCodeDay7.SolveB: Variant;
 Const WorkerCount: Integer = 5;
-var Workers: TDictionary<Integer,TWorker>;
+var Workers: TDictionary<Integer, TWorker>;
     Worker: Tworker;
     point, Key: String;
     i, t: integer;
@@ -1132,7 +1148,7 @@ begin
   Workers := TDictionary<Integer,TWorker>.Create;
 
   Worker.init; //Init a worker
-  for i := 1 to WorkerCount do //and start a numberr
+  for i := 1 to WorkerCount do //and start a number
     Workers.Add(i, Worker);
 
   while Input.Count >0 do
@@ -1161,7 +1177,7 @@ begin
     end;
 
     if Input.Count > 0  then
-    begin // if there is still something todo search for the first event
+    begin // if there is still something todo search for the first event to finish
       t := 999999;
       for Worker in Workers.Values do
       begin
@@ -1526,7 +1542,7 @@ end;
 function TAdventOfCodeDay12.SolveB: Variant;
 Var i: integer;
 begin
-  i := Grow(200); //Assume grow stabilizes after 200 cycles, could be beter...
+  i := Grow(200); //Grow stabalizes after 200 cycles
   Result := (50000000000-200) * (i-Grow(199)) + i; //399999999957
 end;
 {$ENDREGION}
@@ -1539,8 +1555,7 @@ var Carts, TempCarts: TDictionary<TPosition, TCart>;
     Line, s: String;
     x, y, MaxX, MaxY: Integer;
 begin
-  FFirstCrash.X := -1;
-  FFirstCrash.Y := -1;
+  FFirstCrash.SetIt(-1, -1);
   FLatestCar := FFirstCrash;
 
   Tracks := TDictionary<TPosition, String>.Create;
@@ -3152,19 +3167,88 @@ begin
   end;
 end;
 {$ENDREGION}
-
-
+{$REGION 'TAdventOfCodeDay25'}
 function TAdventOfCodeDay25.SolveA: Variant;
+var Line: TStringList;
+    Positions: TList<TPosition4>;
+    Constellations: TDictionary<TPosition4,TGuid>;
+    SeenConstellations: TList<TGUID>;
+    ConstellationIKey, P: TPosition4;
+    ConstellationId: TGuid;
+    s: string;
+    IsAdded: Boolean;
+
+  function Distance(const x, y: TPosition4): Integer;
+  begin
+    Result := Abs(x.a-y.a) + Abs(x.b-y.b) + Abs(x.c-y.c) + Abs(x.d-y.d);
+  end;
+
+  procedure MergeConstellations(const NewId, OldId: TGuid);
+  var p: TPosition4;
+  begin
+    for p in Constellations.Keys do
+    begin
+      if IsEqualGUID(Constellations[p], OldId) then
+        Constellations[p] := NewId;
+    end;
+  end;
+
 begin
-//  Line := TstringList.Create;
-//  Line.Delimiter := ' ';
-//  Line.DelimitedText := s;
+  Positions := TList<TPosition4>.Create;
+  Line := TstringList.Create;
+  Line.Delimiter := ',';
+  for s in FInput do
+  begin
+    Line.DelimitedText := s;
+    p.SetIt(StrToInt(Line[0]), StrToInt(Line[1]), StrToInt(Line[2]), StrToInt(Line[3]));
+    Positions.Add(p);
+  end;
+
+  Constellations := TDictionary<TPosition4,TGuid>.Create;
+  for p in Positions do
+  begin
+    CreateGuid(ConstellationId);
+    IsAdded := False;
+    for ConstellationIKey in Constellations.Keys do
+    begin
+      if Distance(p, ConstellationIKey) <= 3 then
+      begin
+        if not IsAdded then //can be added to this Constellation
+        begin
+          ConstellationId := Constellations[ConstellationiKey];
+          Constellations.Add(p, ConstellationId);
+          IsAdded := True;
+        end
+        else
+          MergeConstellations(ConstellationId, Constellations[ConstellationIKey]);
+      end;
+    end;
+
+    if Not IsAdded then //Entirley new
+      Constellations.Add(p, ConstellationId);
+  end;
+
+  Result := 0;
+  SeenConstellations := TList<TGUID>.Create;
+  for ConstellationId in Constellations.Values do
+  begin
+    if not SeenConstellations.Contains(ConstellationId) then
+    begin
+      SeenConstellations.Add(ConstellationId);
+      Inc(Result);
+    end;
+  end;
+
+  Line.Free;
+  Positions.Free;
+  Constellations.Free;
+  SeenConstellations.Free;
 end;
 
 function TAdventOfCodeDay25.SolveB: Variant;
 begin
-
+  Result := 'Thats the last one!'
 end;
-
+{$ENDREGION}
 
 end.

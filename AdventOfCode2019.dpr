@@ -1,12 +1,11 @@
-program AdventOfCode2018;
+program AdventOfCode2019;
 
 uses
   Vcl.Forms,
   Main in 'Main.pas' {Form1},
   AOCBase in 'AOCBase.pas',
-  AOCSolutions in 'AOCSolutions.pas';
-
-{$R *.res}
+  AOCSolutions in 'AOCSolutions.pas' {$R *.res},
+  uAOCUtils in 'uAOCUtils.pas';
 
 begin
   Application.Initialize;

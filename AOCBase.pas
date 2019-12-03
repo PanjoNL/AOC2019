@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, system.Diagnostics, ClipBrd, system.UITypes ;
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, system.Diagnostics, ClipBrd, system.UITypes;
 
 type TAdventOfCode = class(TPersistent)
   constructor Create;
@@ -15,9 +15,11 @@ type TAdventOfCode = class(TPersistent)
     function SolveB: Variant; virtual;
     procedure BeforeSolve; virtual;
     procedure AfterSolve; virtual;
-    function Input: String;
   private
-  { Private declarations }
+    function SaveFilePath: String;
+    function InputFilePath: string;
+    function MakeFilePath(const aFileName: String): string;
+    function DayIndex: String;
   public
   { Public declarations }
     procedure Solve;
@@ -25,10 +27,36 @@ type TAdventOfCode = class(TPersistent)
 
 implementation
 
-constructor TAdventOfCode.Create;
+uses
+  uAOCUtils;
+
+function TAdventOfCode.DayIndex: String;
 begin
+  Result := AOCUtils.DayIndexFromClassName(Self.ClassName);
+end;
+
+constructor TAdventOfCode.Create;
+var FilePath: String;
+
+  procedure _DownLoadInput;
+  begin
+    AOCUtils.DownLoadPuzzleInput(FInput, DayIndex);
+    FInput.SaveToFile(FilePath);
+  end;
+
+begin
+  Assert(Self.ClassName.StartsWith('TAdventOfCodeDay'), 'Classname should begin with TAdventOfCodeDay, followd by the dayindex');
+
   FInput := TStringList.Create;
-  FInput.LoadFromFile(Input);
+  FilePath := InputFilePath;
+  if FileExists(FilePath) then
+  begin
+    FInput.LoadFromFile(FilePath);
+    if (FInput.Count > 0) And (FInput[0].StartsWith('Please don')) then
+      _DownLoadInput //File exists, but downloaded to early, let's try again
+  end
+  else
+    _DownLoadInput
 end;
 
 destructor TAdventOfCode.Destroy;
@@ -37,13 +65,19 @@ begin
   inherited;
 end;
 
-function TAdventOfCode.Input: string;
-var s: string;
-    i: Integer;
-begin //Some Tricks to determine inputfilepath
-  i := Length('TAdventOfCodeDay');
-  s := Copy(Self.ClassName, i + 1, Length(Self.ClassName) - i);
-  result := 'C:\Users\'+GetEnvironmentVariable('USERNAME')+'\Desktop\AOC2018\Input\input'+s+'.txt'
+function TAdventOfCode.SaveFilePath: String;
+begin
+  Result := MakeFilePath('Solution');
+end;
+
+function TAdventOfCode.InputFilePath: string;
+begin
+  Result := MakeFilePath('Input')
+end;
+
+function TAdventOfCode.MakeFilePath(const aFileName: String): string;
+begin
+  result := Format('%s\%s%s.txt', [AOCUtils.Config.BaseFilePath, aFileName, DayIndex])
 end;
 
 function TAdventOfCode.SolveA: Variant;
@@ -58,17 +92,18 @@ end;
 
 procedure TAdventOfCode.BeforeSolve;
 begin
-  //
+  // To be overriden
 end;
 
 procedure TAdventOfCode.AfterSolve;
 begin
-  //
+  // To be overriden
 end;
+
 
 procedure TAdventOfCode.Solve;
 var StopWach: TStopwatch;
-    iTimeA, iTimeB: Int64;
+    TimeA, TimeB: Int64;
     SolutionA, SolutionB, TotalTime: string;
 begin
   StopWach := StopWach.StartNew;
@@ -76,21 +111,21 @@ begin
   BeforeSolve;
   SolutionA := Trim(VarToStr(SolveA));
 
-  iTimeA := StopWach.ElapsedMilliseconds;
+  TimeA := StopWach.ElapsedMilliseconds;
 
   StopWach := StopWach.StartNew;
 
   SolutionB := Trim(VarToStr(SolveB));
   AfterSolve;
 
-  iTimeB := StopWach.ElapsedMilliseconds;
-  TotalTime := IntToStr(iTimeA + iTimeB);
+  TimeB := StopWach.ElapsedMilliseconds;
+  TotalTime := IntToStr(TimeA + TimeB);
 
-  if (MessageDlg('Solution A: ' + SolutionA + ' Solved in ' + IntToStr(iTimeA) + ' ms.' +#10#13 +
+  if (MessageDlg('Solution A: ' + SolutionA + ' Solved in ' + IntToStr(TimeA) + ' ms.' +#10#13 +
                  'Copy to clipboard?', mtInformation, [mbYes, mbNo], 0) <> Ord(mbNo)) then
     Clipboard.AsText := SolutionA;
 
-  if (MessageDlg('Solution B: ' + SolutionB + ' Solved in ' + IntToStr(iTimeB) + ' ms.' + #10#13 +
+  if (MessageDlg('Solution B: ' + SolutionB + ' Solved in ' + IntToStr(TimeB) + ' ms.' + #10#13 +
                  'Total execution time: ' + TotalTime + ' ms.' + #10#13 +
                  'Copy to clipboard?', mtInformation, [mbYes, mbNo], 0) <> Ord(mbNo)) then
     Clipboard.AsText := SolutionB;

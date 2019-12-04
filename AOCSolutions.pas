@@ -54,11 +54,16 @@ type
     procedure AfterSolve; override;
   end;
 
+Type TDoubleCheck = function (Const aStrToCheck: string; Const aIndex: Integer): Boolean of object;
+
 type
   TAdventOfCodeDay4 = class(TAdventOfCode)
   protected
     function SolveA: Variant; override;
     function SolveB: Variant; override;
+    function Solve(aDoubleCheck: TDoubleCheck): Integer;
+    function DoubleCheckA(Const aStrToCheck: string; Const aIndex: Integer): Boolean;
+    function DoubleCheckB(Const aStrToCheck: string; Const aIndex: Integer): Boolean;
   end;
 
 implementation
@@ -315,74 +320,61 @@ end;
 {$ENDREGION}
 
 function TAdventOfCodeDay4.SolveA: Variant;
-var
-  i, j, PrevInt, TempInt: Integer;
-  s: string;
-  Increasing, Double: Boolean;
 begin
-  Result := 0;
-  for i := StrToInt(FInput[0]) to StrToInt(FInput[1]) do
-  begin
-    s := IntToStr(i);
-    Increasing := True;
-    Double := False;
-    PrevInt := StrToInt(s[1]);
-    for j := 0 to 5 do
-    begin
-      Double := Double or ((s[j]) = s[j+1]);
-
-      TempInt := StrToInt(s[j+1]);
-      if TempInt < PrevInt then
-      begin
-        Increasing := False;
-        break
-      end;
-      PrevInt :=TempInt;
-
-    end;
-    if Double and Increasing then
-      Inc(result); //1665
-  end;
-
+  Result := Solve(DoubleCheckA); //1665
 end;
 
 function TAdventOfCodeDay4.SolveB: Variant;
+begin
+  Result := Solve(DoubleCheckB); //1131
+end;
+
+function TAdventOfCodeDay4.Solve(aDoubleCheck: TDoubleCheck): Integer;
 var
-  i, j, PrevInt, TempInt: Integer;
-  s: string;
-  Increasing, Double: Boolean;
+  iNumberToCheck, IndexToCheck, PrevInt, TempInt: Integer;
+  sNumberToCheck: string;
+  IsIncreasing, ContainsDouble: Boolean;
 begin
   Result := 0;
-  for i := StrToInt(FInput[0]) to StrToInt(FInput[1]) do
+  for iNumberToCheck := StrToInt(FInput[0]) to StrToInt(FInput[1]) do
   begin
-    s := IntToStr(i);
-    Increasing := True;
-    Double := False;
-    PrevInt := StrToInt(s[1]);
-    for j := 1 to 5 do
+    sNumberToCheck := IntToStr(iNumberToCheck);
+    IsIncreasing := True;
+    ContainsDouble := False;
+    PrevInt := StrToInt(sNumberToCheck[1]);
+    for IndexToCheck := 1 to Length(sNumberToCheck) -1 do
     begin
-      if ((s[j]) = s[j+1]) then
-      begin
-        Case j of
-          1: Double := Double or (s[1] <> s[3]);
-          5: Double := Double or (s[5] <> s[4]);
-        else
-          Double := Double or ((s[j] <> s[j-1]) and (s[j] <> s[j+2]));
-        End;
-      end;
-
-      TempInt := StrToInt(s[j+1]);
+      TempInt := StrToInt(sNumberToCheck[IndexToCheck+1]);
       if TempInt < PrevInt then
       begin
-        Increasing := False;
+        IsIncreasing := False;
         break
       end;
-      PrevInt := TempInt
+      PrevInt := TempInt;
+
+      ContainsDouble := ContainsDouble or aDoubleCheck(sNumberToCheck, IndexToCheck);
     end;
 
-    if Double and Increasing then
-      Inc(result); //1131
+    if ContainsDouble and IsIncreasing then
+      Inc(result);
   end;
+end;
+
+
+function TAdventOfCodeDay4.DoubleCheckA(Const aStrToCheck: string; Const aIndex: Integer): Boolean;
+begin
+  Result := (aStrToCheck[aIndex] = aStrToCheck[aIndex+1]);
+end;
+
+function TAdventOfCodeDay4.DoubleCheckB(Const aStrToCheck: string; Const aIndex: integer): Boolean;
+var TempIndex: Integer;
+    TempString: string;
+begin
+  TempIndex := aIndex + 1;
+  TempString := 'X' + aStrToCheck + 'X'; //112233 -> X112233X
+  Result := ((TempString[TempIndex] = TempString[TempIndex +1])
+         and (TempString[TempIndex] <> TempString[TempIndex-1])
+         and (TempString[TempIndex] <> TempString[TempIndex+2]));
 end;
 
 

@@ -30,7 +30,7 @@ procedure AOCconfig.LoadConfig;
 const Config: string = 'Config';
 var Ini: TIniFile;
 begin
-  Ini := TIniFile.Create(ChangeFileExt(ParamStr(0), 'ini'));
+  Ini := TIniFile.Create(ChangeFileExt(ParamStr(0), '.ini'));
   try
     BaseUrl := Ini.ReadString(Config, 'BaseUrl', '');
     BaseFilePath := Ini.ReadString(Config, 'BaseFilePath', '');

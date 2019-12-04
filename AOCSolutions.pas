@@ -3,32 +3,37 @@ unit AOCSolutions;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Generics.Defaults,
-  System.Generics.Collections, system.Diagnostics, AOCBase, RegularExpressions, System.DateUtils, system.StrUtils, system.Math;
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Generics.Defaults, System.Generics.Collections,
+  system.Diagnostics, AOCBase, RegularExpressions, System.DateUtils, system.StrUtils,
+  system.Math;
 
-type TPosition = record
-  x: integer;
-  y: Integer;
-  procedure SetIt(const aX, aY: integer);
-  procedure AddDelta(const aX, aY: Integer);
-end;
+type
+  TPosition = record
+    x: integer;
+    y: Integer;
+    procedure SetIt(const aX, aY: integer);
+    procedure AddDelta(const aX, aY: Integer);
+  end;
 
-type TAdventOfCodeDayExample = class(TAdventOfCode)
+type
+  TAdventOfCodeDayExample = class(TAdventOfCode)
   protected
     function SolveA: Variant; override;
     function SolveB: Variant; override;
   end;
 
-type TAdventOfCodeDay1 = class(TAdventOfCode)
+type
+  TAdventOfCodeDay1 = class(TAdventOfCode)
   protected
     function SolveA: Variant; override;
     function SolveB: Variant; override;
   private
-    function NeededFeul(Const Mass: Integer): Integer;
+    function NeededFeul(const Mass: Integer): Integer;
   end;
 
-type TAdventOfCodeDay2 = class(TAdventOfCode)
+type
+  TAdventOfCodeDay2 = class(TAdventOfCode)
   protected
     Fprogram: TDictionary<Integer, Integer>;
     function RunProgram(const aNoun, aVerb: Integer): Integer;
@@ -38,14 +43,22 @@ type TAdventOfCodeDay2 = class(TAdventOfCode)
     procedure AfterSolve; override;
   end;
 
-type TAdventOfCodeDay3 = class(TAdventOfCode)
+type
+  TAdventOfCodeDay3 = class(TAdventOfCode)
   protected
     PointsL, PointsR: TDictionary<TPosition, Integer>;
-    function LoadPoints(Const Input: string): TDictionary<TPosition, Integer>;
+    function LoadPoints(const Input: string): TDictionary<TPosition, Integer>;
     function SolveA: Variant; override;
     function SolveB: Variant; override;
     procedure BeforeSolve; override;
     procedure AfterSolve; override;
+  end;
+
+type
+  TAdventOfCodeDay4 = class(TAdventOfCode)
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
   end;
 
 implementation
@@ -65,8 +78,10 @@ end;
 {$ENDREGION}
 
 {$Region 'Example' }
+
 function TAdventOfCodeDayExample.SolveA: Variant;
-Var s: string;
+var
+  s: string;
 begin
   Result := 0;
   for s in FInput do
@@ -74,15 +89,16 @@ begin
 end;
 
 function TAdventOfCodeDayExample.SolveB: Variant;
-var frequency, i: Integer;
-    frequencys: TDictionary<Integer, string>;
-Begin
+var
+  frequency, i: Integer;
+  frequencys: TDictionary<Integer, string>;
+begin
   frequency := 0;
 
   frequencys := TDictionary<Integer, string>.Create;
   while true do
   begin
-    for i := 0 to FInput.Count -1 do
+    for i := 0 to FInput.Count - 1 do
     begin
 
       frequency := frequency + StrToInt(FInput[i]);
@@ -101,13 +117,15 @@ end;
 {$ENDREGION}
 
 {$Region 'TAdventOfCodeDay1'}
-function TAdventOfCodeDay1.NeededFeul(Const Mass: Integer): Integer;
+
+function TAdventOfCodeDay1.NeededFeul(const Mass: Integer): Integer;
 begin
-  Result := Trunc(Mass/3)-2;
+  Result := Trunc(Mass / 3) - 2;
 end;
 
 function TAdventOfCodeDay1.SolveA: Variant;
-Var s: string;
+var
+  s: string;
 begin
   Result := 0;
   for s in FInput do
@@ -115,32 +133,35 @@ begin
 end;
 
 function TAdventOfCodeDay1.SolveB: Variant;
-var fuel: Integer;
-    s: string;
-Begin
+var
+  fuel: Integer;
+  s: string;
+begin
   Result := 0;
   for s in FInput do
   begin
-    Fuel := StrToInt(s);
-    while Fuel > 6 do
+    fuel := StrToInt(s);
+    while fuel > 6 do
     begin
-      Fuel := NeededFeul(Fuel);
-      Result := result + Fuel; //4903193
+      fuel := NeededFeul(fuel);
+      Result := result + fuel; //4903193
     end;
   end;
 end;
 {$ENDREGION}
 {$Region 'TAdventOfCodeDay2'}
+
 procedure TAdventOfCodeDay2.BeforeSolve;
-var Line: TStringList;
-    i: Integer;
+var
+  Line: TStringList;
+  i: Integer;
 begin
-  Fprogram:= TDictionary<Integer, Integer>.Create;
-  line := TStringList.Create;
-  line.Delimiter := ',';
+  Fprogram := TDictionary<Integer, Integer>.Create;
+  Line := TStringList.Create;
+  Line.Delimiter := ',';
   Line.DelimitedText := FInput[0];
 
-  for i := 0 to Line.Count -1 do
+  for i := 0 to Line.Count - 1 do
     Fprogram.Add(i, StrToInt(Line[i]));
 
   Line.Free;
@@ -152,8 +173,9 @@ begin
 end;
 
 function TAdventOfCodeDay2.RunProgram(const aNoun, aVerb: Integer): Integer;
-var TempProgram: TDictionary<Integer, Integer>;
-    position: Integer;
+var
+  TempProgram: TDictionary<Integer, Integer>;
+  position: Integer;
 begin
   TempProgram := TDictionary<Integer, Integer>.Create(FProgram);
 
@@ -164,8 +186,10 @@ begin
   while TempProgram[position] <> 99 do
   begin
     case TempProgram[position] of
-      1: TempProgram[TempProgram[position+3]] := TempProgram[TempProgram[position+1]] + TempProgram[TempProgram[position+2]];
-      2: TempProgram[TempProgram[position+3]] := TempProgram[TempProgram[position+1]] * TempProgram[TempProgram[position+2]];
+      1:
+        TempProgram[TempProgram[position + 3]] := TempProgram[TempProgram[position + 1]] + TempProgram[TempProgram[position + 2]];
+      2:
+        TempProgram[TempProgram[position + 3]] := TempProgram[TempProgram[position + 1]] * TempProgram[TempProgram[position + 2]];
     else
       raise Exception.Create('Unknown command: ' + IntToStr(TempProgram[position]));
     end;
@@ -183,7 +207,8 @@ begin
 end;
 
 function TAdventOfCodeDay2.SolveB: Variant;
-var noun, verb: Integer;
+var
+  noun, verb: Integer;
 begin
   Result := 0;
 
@@ -191,12 +216,12 @@ begin
     for verb := 0 to 100 do
     begin
       if RunProgram(noun, verb) = 19690720 then
-        Exit(100*noun + verb) //9425
+        Exit(100 * noun + verb) //9425
     end;
 end;
 {$ENDREGION}
+{$Region 'TAdventOfCodeDay3'}
 
-//{$Region 'TAdventOfCodeDay3}
 procedure TAdventOfCodeDay3.BeforeSolve;
 begin
   PointsL := LoadPoints(FInput[0]);
@@ -209,39 +234,44 @@ begin
   PointsR.Free;
 end;
 
-function TAdventOfCodeDay3.LoadPoints(Const Input: string): TDictionary<TPosition, Integer>;
-var Line: TStringList;
-    Position: TPosition;
-    Steps, i, j, DeltaX, DeltaY: Integer;
+function TAdventOfCodeDay3.LoadPoints(const Input: string): TDictionary<TPosition, Integer>;
+var
+  Line: TStringList;
+  Position: TPosition;
+  Steps, i, j, DeltaX, DeltaY: Integer;
 begin
   Result := TDictionary<TPosition, Integer>.Create;
 
-  line := TStringList.Create;
-  line.Delimiter := ',';
+  Line := TStringList.Create;
+  Line.Delimiter := ',';
   Line.DelimitedText := Input;
 
-  Position.SetIt(0,0);
+  Position.SetIt(0, 0);
 
   Steps := 0;
-  for i := 0 to Line.Count-1 do
+  for i := 0 to Line.Count - 1 do
   begin
     DeltaX := 0;
     DeltaY := 0;
 
-    case IndexStr(LeftStr(Line[i], 1), ['R','L','U','D']) of
-      0: DeltaX := 1;
-      1: DeltaX := -1;
-      2: DeltaY := 1;
-      3: DeltaY := -1;
+    case IndexStr(LeftStr(Line[i], 1), ['R', 'L', 'U', 'D']) of
+      0:
+        DeltaX := 1;
+      1:
+        DeltaX := -1;
+      2:
+        DeltaY := 1;
+      3:
+        DeltaY := -1;
     else
-      raise Exception.Create('Unknown command ' + Line[i] );
+      raise Exception.Create('Unknown command ' + Line[i]);
     end;
 
-    for j := 0 to StrToInt(RightStr(Line[i], Length(Line[i])-1))-1 do
+    for j := 0 to StrToInt(RightStr(Line[i], Length(Line[i]) - 1)) - 1 do
     begin
       Inc(Steps);
       Position.AddDelta(DeltaX, DeltaY);
-      if Not Result.ContainsKey(Position) then
+      if not Result.ContainsKey(Position) then
         Result.Add(Position, Steps);
     end;
   end;
@@ -250,15 +280,16 @@ begin
 end;
 
 function TAdventOfCodeDay3.SolveA: Variant;
-var Position, StartPosition: TPosition;
+var
+  Position, StartPosition: TPosition;
 
   function _Distance(const a, b: TPosition): Integer;
   begin
-    Result := Abs(a.x-b.x) + Abs(a.y-b.y);
+    Result := Abs(a.x - b.x) + Abs(a.y - b.y);
   end;
 
 begin
-  StartPosition.SetIt(0,0);
+  StartPosition.SetIt(0, 0);
   Result := MaxInt;
   for Position in PointsL.Keys do
   begin
@@ -269,7 +300,8 @@ begin
 end;
 
 function TAdventOfCodeDay3.SolveB: Variant;
-var Point: TPair<TPosition, Integer>;
+var
+  Point: TPair<TPosition, Integer>;
 begin
   Result := MaxInt;
 
@@ -277,15 +309,86 @@ begin
   begin
     if PointsR.ContainsKey(Point.key) then
       if (PointsR[Point.key] + Point.Value) < Result then
-        Result := (PointsR[Point.key] + Point.Value);
+        Result := (PointsR[Point.key] + Point.Value); //13698
   end;
 end;
-//{$ENDREGION}
+{$ENDREGION}
+
+function TAdventOfCodeDay4.SolveA: Variant;
+var
+  i, j, PrevInt, TempInt: Integer;
+  s: string;
+  Increasing, Double: Boolean;
+begin
+  Result := 0;
+  for i := StrToInt(FInput[0]) to StrToInt(FInput[1]) do
+  begin
+    s := IntToStr(i);
+    Increasing := True;
+    Double := False;
+    PrevInt := StrToInt(s[1]);
+    for j := 0 to 5 do
+    begin
+      Double := Double or ((s[j]) = s[j+1]);
+
+      TempInt := StrToInt(s[j+1]);
+      if TempInt < PrevInt then
+      begin
+        Increasing := False;
+        break
+      end;
+      PrevInt :=TempInt;
+
+    end;
+    if Double and Increasing then
+      Inc(result); //1665
+  end;
+
+end;
+
+function TAdventOfCodeDay4.SolveB: Variant;
+var
+  i, j, PrevInt, TempInt: Integer;
+  s: string;
+  Increasing, Double: Boolean;
+begin
+  Result := 0;
+  for i := StrToInt(FInput[0]) to StrToInt(FInput[1]) do
+  begin
+    s := IntToStr(i);
+    Increasing := True;
+    Double := False;
+    PrevInt := StrToInt(s[1]);
+    for j := 1 to 5 do
+    begin
+      if ((s[j]) = s[j+1]) then
+      begin
+        Case j of
+          1: Double := Double or (s[1] <> s[3]);
+          5: Double := Double or (s[5] <> s[4]);
+        else
+          Double := Double or ((s[j] <> s[j-1]) and (s[j] <> s[j+2]));
+        End;
+      end;
+
+      TempInt := StrToInt(s[j+1]);
+      if TempInt < PrevInt then
+      begin
+        Increasing := False;
+        break
+      end;
+      PrevInt := TempInt
+    end;
+
+    if Double and Increasing then
+      Inc(result); //1131
+  end;
+end;
 
 
 initialization
-  RegisterClasses([TAdventOfCodeDayExample, TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3
-
-  ]);
+  RegisterClasses([TAdventOfCodeDayExample, TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4
+]);
 
 end.
+

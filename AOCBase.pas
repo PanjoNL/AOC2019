@@ -6,6 +6,9 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, system.Diagnostics, ClipBrd, system.UITypes;
 
+type TProcedureToRun = procedure of object;
+type TFunctionToRun = function: Variant of object;
+
 type TAdventOfCode = class(TPersistent)
   constructor Create;
   destructor Destroy; override;
@@ -20,6 +23,10 @@ type TAdventOfCode = class(TPersistent)
     function InputFilePath: string;
     function MakeFilePath(const aFileName: String): string;
     function DayIndex: String;
+    procedure DoProcedure(ProcedureToRun: TProcedureToRun; const aDisplayName: String);
+    function DoFunction(FuntionToRun: TFunctionToRun; const aDisplayName: string; Out TicksTaken: Int64): string;
+    procedure LoadInput;
+    procedure WriteTicksToDebug(Const aFunctionName: string; Const aStartTick: Int64);
   public
   { Public declarations }
     procedure Solve;
@@ -36,27 +43,11 @@ begin
 end;
 
 constructor TAdventOfCode.Create;
-var FilePath: String;
-
-  procedure _DownLoadInput;
-  begin
-    AOCUtils.DownLoadPuzzleInput(FInput, DayIndex);
-    FInput.SaveToFile(FilePath);
-  end;
-
 begin
   Assert(Self.ClassName.StartsWith('TAdventOfCodeDay'), 'Classname should begin with TAdventOfCodeDay, followd by the dayindex');
 
   FInput := TStringList.Create;
-  FilePath := InputFilePath;
-  if FileExists(FilePath) then
-  begin
-    FInput.LoadFromFile(FilePath);
-    if (FInput.Count > 0) And (FInput[0].StartsWith('Please don')) then
-      _DownLoadInput //File exists, but downloaded to early, let's try again
-  end
-  else
-    _DownLoadInput
+  DoProcedure(LoadInput, 'LoadInput');
 end;
 
 destructor TAdventOfCode.Destroy;
@@ -100,34 +91,69 @@ begin
   // To be overriden
 end;
 
+procedure TAdventOfCode.WriteTicksToDebug(Const aFunctionName: string; Const aStartTick: Int64);
+begin
+  Writeln(Format('%s -> TickCount: %d', [aFunctionName, GetTickCount-aStartTick] ));
+end;
+
+procedure TAdventOfCode.DoProcedure(ProcedureToRun: TProcedureToRun; const aDisplayName: String);
+var StartTick: Int64;
+begin
+  StartTick := GetTickCount;
+  ProcedureToRun;
+  WriteTicksToDebug(aDisplayName, StartTick);
+end;
+
+function TAdventOfCode.DoFunction(FuntionToRun: TFunctionToRun; const aDisplayName: string; Out TicksTaken: Int64): string;
+var StartTick: Int64;
+begin
+  StartTick := GetTickCount;
+  Result := VarToStr(FuntionToRun);
+  WriteTicksToDebug(aDisplayName, StartTick);
+  TicksTaken := GetTickCount - StartTick;
+end;
+
+procedure TAdventOfCode.LoadInput;
+var FilePath: string;
+
+  procedure _DownLoadInput;
+  begin
+    AOCUtils.DownLoadPuzzleInput(FInput, DayIndex);
+    FInput.SaveToFile(FilePath);
+  end;
+
+begin
+  FilePath := InputFilePath;
+  if FileExists(FilePath) then
+  begin
+    FInput.LoadFromFile(FilePath);
+    if (FInput.Count > 0) And (FInput[0].StartsWith('Please don')) then
+      _DownLoadInput //File exists, but downloaded to early, let's try again
+  end
+  else
+    _DownLoadInput;
+end;
 
 procedure TAdventOfCode.Solve;
-var StopWach: TStopwatch;
-    TimeA, TimeB: Int64;
-    SolutionA, SolutionB, TotalTime: string;
+var TimeA, TimeB, StartTime, TotalTime: Int64;
+    SolutionA, SolutionB: string;
 begin
-  StopWach := StopWach.StartNew;
+  StartTime := GetTickCount;
 
-  BeforeSolve;
-  SolutionA := Trim(VarToStr(SolveA));
+  DoProcedure(BeforeSolve, 'BeforeSolve');
+  SolutionA := DoFunction(SolveA, 'SolveA', TimeA);
+  SolutionB := DoFunction(SolveB, 'SolveB', TimeB);
+  DoProcedure(AfterSolve, 'AfterSolve');
 
-  TimeA := StopWach.ElapsedMilliseconds;
+  TotalTime := GetTickCount - StartTime;
 
-  StopWach := StopWach.StartNew;
-
-  SolutionB := Trim(VarToStr(SolveB));
-  AfterSolve;
-
-  TimeB := StopWach.ElapsedMilliseconds;
-  TotalTime := IntToStr(TimeA + TimeB);
-
-  if (MessageDlg('Solution A: ' + SolutionA + ' Solved in ' + IntToStr(TimeA) + ' ms.' +#10#13 +
-                 'Copy to clipboard?', mtInformation, [mbYes, mbNo], 0) <> Ord(mbNo)) then
+  if (MessageDlg(Format('Solution A: %s Solved in %d  ms.' +#10#13 +
+                 'Copy to clipboard?', [SolutionA, TimeA]), mtInformation, [mbYes, mbNo], 0) <> Ord(mbNo)) then
     Clipboard.AsText := SolutionA;
 
-  if (MessageDlg('Solution B: ' + SolutionB + ' Solved in ' + IntToStr(TimeB) + ' ms.' + #10#13 +
-                 'Total execution time: ' + TotalTime + ' ms.' + #10#13 +
-                 'Copy to clipboard?', mtInformation, [mbYes, mbNo], 0) <> Ord(mbNo)) then
+  if (MessageDlg(Format('Solution B: %s Solved in %d ms.' + #10#13 +
+                 'Total execution time: %d ms.' + #10#13 +
+                 'Copy to clipboard?', [SolutionB, TimeB, TotalTime]), mtInformation, [mbYes, mbNo], 0) <> Ord(mbNo)) then
     Clipboard.AsText := SolutionB;
 end;
 

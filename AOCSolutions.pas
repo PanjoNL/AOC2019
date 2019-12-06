@@ -77,6 +77,16 @@ type
     function RunProgram(const StartOutputParam: Integer): Integer;
   end;
 
+type
+  TAdventOfCodeDay6 = class(TAdventOfCode)
+  protected
+    Map: TDictionary<String,String>;
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
+  end;
+
 implementation
 
 {$Region 'TPosition'}
@@ -469,11 +479,90 @@ begin
   TempProgram.Free;
 end;
 {$ENDREGION}
+//{$Region 'TAdventOfCodeDay6'}
+procedure TAdventOfCodeDay6.BeforeSolve;
+var line: TStringList;
+    i: Integer;
+begin
+  Map := TDictionary<String,String>.Create;;
+  Line := TStringList.Create;
+  for i := 0 to FInput.Count -1 do
+  begin
+    Line.Delimiter := ')';
+    Line.DelimitedText := FInput[i];
+    Map.Add(Line[1], Line[0]);
+  end;
+  line.free;
+end;
+
+procedure TAdventOfCodeDay6.AfterSolve;
+begin
+  Map.Free
+end;
+
+function TAdventOfCodeDay6.SolveA: Variant;
+
+  function _CountOrbits(const From: String; Level: integer): Integer;
+  var Pair: tPair<string, String>;
+  begin
+    Result := 0;
+    for pair in map do
+      if Pair.Value = From then
+        Result := Result + level + _CountOrbits(Pair.Key, Level+1);
+  end;
+
+begin
+  Result := _CountOrbits('COM', 1); //119831
+end;
+
+function TAdventOfCodeDay6.SolveB: Variant;
+
+  procedure _FindRoute(From, dest: String; route: TList<String>);
+    var Pair: tPair<string, String>;
+  begin
+    Result := 0;
+
+    if route.Contains(dest) then
+      exit;
+
+    for pair in map do
+    begin
+      if Pair.Value = From then
+      begin
+        route.Add(Pair.Key);
+        _FindRoute(Pair.Key, dest, route);
+        if route.Contains(dest) then
+          exit ;
+
+        route.Remove(Pair.Key);
+      end;
+    end;
+  end;
+
+var route1, Route2: TList<String>;
+begin
+  route1 := TList<String>.Create;
+  _FindRoute('COM', 'YOU', route1);
+
+  route2 := TList<String>.Create;
+  _FindRoute('COM', 'SAN', route2);
+
+  while route1[0] = route2[0] do
+  begin
+    route1.Remove(route1[0]);
+    route2.Remove(route2[0]);
+  end;
+
+  Result := route1.Count + Route2.Count -2; //322
+  route1.Free;
+  Route2.Free;
+end;
+//{$ENDREGION}
 
 
 initialization
   RegisterClasses([TAdventOfCodeDayExample, TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4,
-  TAdventOfCodeDay5
+  TAdventOfCodeDay5, TAdventOfCodeDay6
 
 ]);
 

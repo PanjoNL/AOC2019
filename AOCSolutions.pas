@@ -6,22 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Generics.Defaults, System.Generics.Collections,
   system.Diagnostics, AOCBase, RegularExpressions, System.DateUtils, system.StrUtils,
-  system.Math;
-
-type
-  TPosition = record
-    x: integer;
-    y: Integer;
-    procedure SetIt(const aX, aY: integer);
-    procedure AddDelta(const aX, aY: Integer);
-  end;
-
-type
-  TAdventOfCodeDayExample = class(TAdventOfCode)
-  protected
-    function SolveA: Variant; override;
-    function SolveB: Variant; override;
-  end;
+  system.Math, IntComputers, uAOCUtils;
 
 type
   TAdventOfCodeDay1 = class(TAdventOfCode)
@@ -46,8 +31,8 @@ type
 type
   TAdventOfCodeDay3 = class(TAdventOfCode)
   protected
-    PointsL, PointsR: TDictionary<TPosition, Integer>;
-    function LoadPoints(const Input: string): TDictionary<TPosition, Integer>;
+    PointsL, PointsR: TAOCDictionary<TPosition, Integer>;
+    function LoadPoints(const Input: string): TAOCDictionary<TPosition, Integer>;
     function SolveA: Variant; override;
     function SolveB: Variant; override;
     procedure BeforeSolve; override;
@@ -87,58 +72,30 @@ type
     procedure AfterSolve; override;
   end;
 
-implementation
-
-{$Region 'TPosition'}
-procedure TPosition.SetIt(const aX: Integer; const aY: Integer);
-begin
-  x := aX;
-  y := aY;
-end;
-
-procedure TPosition.AddDelta(const aX, aY: Integer);
-begin
-  x := x + aX;
-  y := y + aY;
-end;
-{$ENDREGION}
-
-{$Region 'Example' }
-
-function TAdventOfCodeDayExample.SolveA: Variant;
-var s: string;
-begin
-  Result := 0;
-  for s in FInput do
-    Result := Result + StrToInt(s); //406
-end;
-
-function TAdventOfCodeDayExample.SolveB: Variant;
-var frequency, i: Integer;
-    frequencys: TDictionary<Integer, string>;
-begin
-  frequency := 0;
-
-  frequencys := TDictionary<Integer, string>.Create;
-  while true do
-  begin
-    for i := 0 to FInput.Count - 1 do
-    begin
-
-      frequency := frequency + StrToInt(FInput[i]);
-
-      if frequencys.ContainsKey(frequency) then
-      begin
-        result := frequency; //312
-        Exit;
-      end;
-      frequencys.Add(frequency, '');
-    end;
+type
+  TAdventOfCodeDay7 = class(TAdventOfCode)
+  protected
+    Fprogram: TDictionary<Integer, Integer>;
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+    function GetPhaseSettings(Const StartAt, StopAt: Integer): TList<String>;
   end;
 
-  frequencys.Free;
-end;
-{$ENDREGION}
+type
+  TAdventOfCodeDay8 = class(TAdventOfCode)
+  protected
+    PictureDate: TList<string>;
+    const PictureWith: integer = 25;
+          PictureHeight: Integer = 6;
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+  end;
+
+implementation
 
 {$Region 'TAdventOfCodeDay1'}
 
@@ -174,18 +131,8 @@ end;
 {$Region 'TAdventOfCodeDay2'}
 
 procedure TAdventOfCodeDay2.BeforeSolve;
-var Line: TStringList;
-    i: Integer;
 begin
-  Fprogram := TDictionary<Integer, Integer>.Create;
-  Line := TStringList.Create;
-  Line.Delimiter := ',';
-  Line.DelimitedText := FInput[0];
-
-  for i := 0 to Line.Count - 1 do
-    Fprogram.Add(i, StrToInt(Line[i]));
-
-  Line.Free;
+  Fprogram := TBasicIntComputer.ParseIntput(FInput[0]);
 end;
 
 procedure TAdventOfCodeDay2.Aftersolve;
@@ -194,29 +141,14 @@ begin
 end;
 
 function TAdventOfCodeDay2.RunProgram(const aNoun, aVerb: Integer): Integer;
-var TempProgram: TDictionary<Integer, Integer>;
-    position: Integer;
+var Computer: TBasicIntComputer;
 begin
-  TempProgram := TDictionary<Integer, Integer>.Create(FProgram);
-
-  TempProgram[1] := aNoun;
-  TempProgram[2] := aVerb;
-
-  position := 0;
-  while TempProgram[position] <> 99 do
-  begin
-    case TempProgram[position] of
-      1: TempProgram[TempProgram[position + 3]] := TempProgram[TempProgram[position + 1]] + TempProgram[TempProgram[position + 2]];
-      2: TempProgram[TempProgram[position + 3]] := TempProgram[TempProgram[position + 1]] * TempProgram[TempProgram[position + 2]];
-    else
-      raise Exception.Create('Unknown command: ' + IntToStr(TempProgram[position]));
-    end;
-
-    position := position + 4;
-  end;
-
-  Result := TempProgram[0];
-  TempProgram.Free;
+  Computer := TBasicIntComputer.Create(Fprogram);
+  Computer.WriteMemory(1, aNoun);
+  Computer.WriteMemory(2, aVerb);
+  Computer.Run;
+  Result := Computer.GetMemory(0);
+  Computer.Free;
 end;
 
 function TAdventOfCodeDay2.SolveA: Variant;
@@ -251,12 +183,12 @@ begin
   PointsR.Free;
 end;
 
-function TAdventOfCodeDay3.LoadPoints(const Input: string): TDictionary<TPosition, Integer>;
+function TAdventOfCodeDay3.LoadPoints(const Input: string): TAOCDictionary<TPosition, Integer>;
 var Line: TStringList;
     Position: TPosition;
     Steps, i, j, DeltaX, DeltaY: Integer;
 begin
-  Result := TDictionary<TPosition, Integer>.Create;
+  Result := TAOCDictionary<TPosition, Integer>.Create;
 
   Line := TStringList.Create;
   Line.Delimiter := ',';
@@ -283,8 +215,7 @@ begin
     begin
       Inc(Steps);
       Position.AddDelta(DeltaX, DeltaY);
-      if not Result.ContainsKey(Position) then
-        Result.Add(Position, Steps);
+      Result.AddOrIgnoreValue(Position, Steps);
     end;
   end;
 
@@ -292,35 +223,21 @@ begin
 end;
 
 function TAdventOfCodeDay3.SolveA: Variant;
-var Position, StartPosition: TPosition;
-
-  function _Distance(const a, b: TPosition): Integer;
-  begin
-    Result := Abs(a.x - b.x) + Abs(a.y - b.y);
-  end;
-
+var Position: TPosition;
 begin
-  StartPosition.SetIt(0, 0);
   Result := MaxInt;
   for Position in PointsL.Keys do
-  begin
     if PointsR.ContainsKey(Position) then
-      if _Distance(StartPosition, Position) < Result then
-        Result := _Distance(StartPosition, Position); //870
-  end;
+      Result := Min(Result, Abs(Position.x) + Abs(Position.y)); //870
 end;
 
 function TAdventOfCodeDay3.SolveB: Variant;
 var Point: TPair<TPosition, Integer>;
 begin
   Result := MaxInt;
-
   for Point in PointsL do
-  begin
     if PointsR.ContainsKey(Point.key) then
-      if (PointsR[Point.key] + Point.Value) < Result then
-        Result := (PointsR[Point.key] + Point.Value); //13698
-  end;
+      Result := Min(Result, PointsR[Point.key] + Point.Value); //13698
 end;
 {$ENDREGION}
 {$Region 'TAdventOfCodeDay4'}
@@ -352,7 +269,7 @@ begin
       if TempInt < PrevInt then
       begin
         IsIncreasing := False;
-        break
+        break;
       end;
       PrevInt := TempInt;
 
@@ -382,18 +299,8 @@ end;
 {$ENDREGION}
 {$Region 'TAdventOfCodeDay5'}
 procedure TAdventOfCodeDay5.BeforeSolve;
-var Line: TStringList;
-    i: Integer;
 begin
-  Fprogram := TDictionary<Integer, Integer>.Create;
-  Line := TStringList.Create;
-  Line.Delimiter := ',';
-  Line.DelimitedText := FInput[0];
-
-  for i := 0 to Line.Count - 1 do
-    Fprogram.Add(i, StrToInt(Line[i]));
-
-  Line.Free;
+  Fprogram := TBasicIntComputer.ParseIntput(FInput[0]);
 end;
 
 procedure TAdventOfCodeDay5.AfterSolve;
@@ -412,74 +319,15 @@ begin
 end;
 
 function TAdventOfCodeDay5.RunProgram(const StartOutputParam: Integer): Integer;
-var TempProgram: TDictionary<Integer, Integer>;
-    position, OutPutParam: Integer;
-    Command: string;
-
-  function _GetParam(Const aIndex: Integer): Integer;
-  begin
-    if Command[Length(Command)-1-aIndex] = '1' then
-      Result := TempProgram[position + aIndex]
-    else
-      Result := TempProgram[TempProgram[position + aIndex]]
-  end;
-
+var Computer: TBasicIntComputer;
 begin
-  TempProgram := TDictionary<Integer, Integer>.Create(FProgram);
-
-  position := 0;
-  OutPutParam := StartOutputParam;
-  while TempProgram[position] <> 99 do
-  begin
-    Command := RightStr('00000'+IntToStr(TempProgram[position]), 5); //104 -> 00104
-
-    case StrToInt(RightStr(Command, 2)) of
-      1: begin
-          TempProgram[TempProgram[position + 3]] := _GetParam(1) + _GetParam(2);
-          position := position + 4;
-         end;
-      2: begin
-          TempProgram[TempProgram[position + 3]] := _GetParam(1) * _GetParam(2);
-          position := position + 4;
-         end;
-      3: begin
-          TempProgram[TempProgram[position + 1]] := OutPutParam;
-          position := position + 2
-         end;
-      4: begin
-          OutPutParam := _GetParam(1);
-          position := position + 2
-         end;
-      5: begin
-          if _GetParam(1) <> 0 then
-            position := _GetParam(2)
-          else
-            position := position + 3
-         end;
-      6: begin
-          if _GetParam(1) = 0 then
-            position := _GetParam(2)
-          else
-            position := position + 3;
-         end;
-      7: begin
-          TempProgram[TempProgram[position + 3]] := Integer(_GetParam(1) < _GetParam(2));
-          position := position + 4;
-         end;
-      8: begin
-          TempProgram[TempProgram[position + 3]] := Integer(_GetParam(1) = _GetParam(2));
-          position := position + 4;
-          end;
-    else
-      raise Exception.CreateFmt('Unknown command: %s', [Command]);
-    end;
-  end;
-
-  Result :=  OutPutParam;
-  TempProgram.Free;
+  Computer := TBasicIntComputer.Create(Fprogram);
+  Computer.LastOutput := StartOutputParam;
+  Result := Computer.Run;
+  Computer.Free;
 end;
 {$ENDREGION}
-//{$Region 'TAdventOfCodeDay6'}
+{$Region 'TAdventOfCodeDay6'}
 procedure TAdventOfCodeDay6.BeforeSolve;
 var line: TStringList;
     i: Integer;
@@ -557,12 +405,200 @@ begin
   route1.Free;
   Route2.Free;
 end;
-//{$ENDREGION}
+{$ENDREGION}
+{$Region 'TAdventOfCodeDay7'}
+procedure TAdventOfCodeDay7.BeforeSolve;
+begin
+  Fprogram := TBasicIntComputer.ParseIntput(FInput[0]);
+end;
 
+procedure TAdventOfCodeDay7.AfterSolve;
+begin
+  Fprogram.Free;
+end;
+
+function TAdventOfCodeDay7.GetPhaseSettings(Const StartAt, StopAt: Integer): TList<String>;
+var a,b,c,d,e: Integer;
+    PhaseCheck: TDictionary<Integer,Boolean>;
+begin
+  PhaseCheck := TDictionary<Integer,Boolean>.Create;
+  Result := TList<String>.Create;
+
+  for A := StartAt to StopAt do
+  for B := StartAt to StopAt do
+  for C := StartAt to StopAt do
+  for D := StartAt to StopAt do
+  for E := StartAt to StopAt do
+  begin
+    PhaseCheck.Clear;
+    PhaseCheck.AddOrSetValue(A,True);
+    PhaseCheck.AddOrSetValue(B,True);
+    PhaseCheck.AddOrSetValue(C,True);
+    PhaseCheck.AddOrSetValue(D,True);
+    PhaseCheck.AddOrSetValue(E,True);
+    if PhaseCheck.Count = 5 then
+      Result.Add(IntToStr(A)+IntToStr(B)+IntToStr(C)+IntToStr(D)+IntToStr(E));
+  end;
+  PhaseCheck.Free;
+end;
+
+function TAdventOfCodeDay7.SolveA: Variant;
+var PhaseSettings: TList<String>;
+    PhaseSetting: string;
+    InputSignal, i: Integer;
+    Amplifier: TAmplifierController;
+begin
+  Result := 0;
+  PhaseSettings := GetPhaseSettings(0,4);
+
+  for PhaseSetting in PhaseSettings do
+  begin
+    InputSignal := 0;
+    for i := 0 to 4 do
+    begin
+      Amplifier := TAmplifierController.Create(Fprogram, StrToInt(PhaseSetting[i+1]), False);
+      Amplifier.SetPhaseSetting(InputSignal);
+      InputSignal := Amplifier.Run;
+      Amplifier.Free;
+    end;
+    Result := Max(Result, InputSignal);
+  end;
+  PhaseSettings.Free;
+end;
+
+function TAdventOfCodeDay7.SolveB: Variant;
+var PhaseSettings: TList<String>;
+    PhaseSetting: string;
+    i, InputSignal: Integer;
+    Amplifiers: TList<TAmplifierController>;
+begin
+  PhaseSettings := GetPhaseSettings(5,9);
+  Amplifiers := TList<TAmplifierController>.Create;
+
+  Result := 0;
+
+  for PhaseSetting in PhaseSettings do
+  begin
+    for i := 0 to 4 do
+      Amplifiers.Add(TAmplifierController.Create(Fprogram, StrToInt(PhaseSetting[i+1]), True));
+
+    InputSignal := 0;
+    while not  Amplifiers[4].Istopped do
+    begin
+      for i := 0 to 4 do
+      begin
+        Amplifiers[i].SetPhaseSetting(InputSignal);
+        InputSignal := Amplifiers[i].Run;
+      end;
+    end;
+
+    Result := Max(Result, Amplifiers[4].LastOutput); //33660560
+    for i := 0 to 4 do
+      Amplifiers[i].Free;
+    Amplifiers.Clear;
+  end;
+
+  PhaseSettings.Free;
+  Amplifiers.Free;
+end;
+{$ENDREGION}
+{$REGION 'TAdventOfCodeDay8'}
+procedure TAdventOfCodeDay8.BeforeSolve;
+var i, PictureLength: Integer;
+begin
+  PictureDate := TList<String>.Create;
+  PictureLength := PictureHeight * PictureWith;
+  i := 1;
+  while i < Length(FInput[0]) do
+  begin
+    PictureDate.Add(Copy(FInput[0], i, PictureLength));
+    Inc(i, PictureLength);
+  end;
+end;
+
+procedure TAdventOfCodeDay8.AfterSolve;
+begin
+  PictureDate.Free;
+end;
+
+function TAdventOfCodeDay8.SolveA: Variant;
+var i, Digits0, Digits1, Digits2, CountDigits0: Integer;
+    PictureLayer: string;
+begin
+  CountDigits0 := MaxInt;
+  Result := 0;
+  for PictureLayer in PictureDate do
+  begin
+    Digits0 := 0;
+    Digits1 := 0;
+    Digits2 := 0;
+    for i := 1 to Length(PictureLayer) do
+    case StrToInt(PictureLayer[i]) of
+      0: Inc(Digits0);
+      1: Inc(Digits1);
+      2: Inc(Digits2);
+    end;
+
+    if (Digits0 < CountDigits0) then
+    begin
+      Result := Digits1 * Digits2; //1463
+      CountDigits0 := Digits0;
+    end
+  end;
+end;
+
+function TAdventOfCodeDay8.SolveB: Variant;
+var i, j, X, y: Integer;
+    Picture: TAOCDictionary<TPosition, Boolean>;
+    Position: TPosition;
+    Line: string;
+    OutPut: TStringList;
+begin
+  Picture := TAOCDictionary<TPosition, Boolean>.Create;
+  for i := 0 to PictureDate.Count - 1 do
+  begin
+    x := 0;
+    y := 0;
+
+    for j := 1 to Length(PictureDate[i]) do
+    begin
+      if x >= PictureWith then
+      begin
+        Dec(x, PictureWith);
+        Inc(y);
+      end;
+      Position.SetIt(x, y);
+
+      if StrToInt(PictureDate[i][j]) in [0, 1] then
+        Picture.AddOrIgnoreValue(Position, StrToBool(PictureDate[i][j]));
+
+      Inc(X);
+    end;
+  end;
+
+  OutPut := TStringList.Create;
+  for y := 0 to PictureHeight-1 do
+  begin
+    Line := '';
+    for x:= 0 to PictureWith-1 do
+    begin
+      Position.SetIt(x, y);
+      Line := Line + IfThen(Picture[Position], '#', ' ')
+    end;
+    OutPut.Add(Line);
+    Writeln(Line);
+  end;
+  OutPut.SaveToFile(SaveFilePath);
+  Result := Format('Solution saved at: %s', [SaveFilePath]);
+
+  OutPut.Free;
+  Picture.Free;
+end;
+{$ENDREGION}
 
 initialization
-  RegisterClasses([TAdventOfCodeDayExample, TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4,
-  TAdventOfCodeDay5, TAdventOfCodeDay6
+  RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
+    TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8
 
 ]);
 

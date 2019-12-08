@@ -18,8 +18,8 @@ type TAdventOfCode = class(TPersistent)
     function SolveB: Variant; virtual;
     procedure BeforeSolve; virtual;
     procedure AfterSolve; virtual;
-  private
     function SaveFilePath: String;
+  private
     function InputFilePath: string;
     function MakeFilePath(const aFileName: String): string;
     function DayIndex: String;

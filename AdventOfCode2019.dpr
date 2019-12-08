@@ -5,7 +5,8 @@ uses
   Main in 'Main.pas' {Form1},
   AOCBase in 'AOCBase.pas',
   AOCSolutions in 'AOCSolutions.pas' {$R *.res},
-  uAOCUtils in 'uAOCUtils.pas';
+  uAOCUtils in 'uAOCUtils.pas',
+  IntComputers in 'IntComputers.pas';
 
 begin
   Application.Initialize;

@@ -24,6 +24,19 @@ type AOCUtils = class
     class procedure DownLoadPuzzleInput(var InputList: TStrings; Const DayIndex: String);
 end;
 
+type TAOCDictionary<TKey,TValue> = class(TDictionary<TKey,TValue>)
+  public
+    procedure AddOrIgnoreValue(const Key: TKey; const Value: TValue);
+end;
+
+type
+  TPosition = record
+    x: integer;
+    y: Integer;
+    procedure SetIt(const aX, aY: integer);
+    procedure AddDelta(const aX, aY: Integer);
+  end;
+
 implementation
 
 procedure AOCconfig.LoadConfig;
@@ -103,5 +116,22 @@ begin
   end;
 end;
 
+procedure TAOCDictionary<TKey,TValue>.AddOrIgnoreValue(const Key: TKey; const Value: TValue);
+begin
+  if not Self.ContainsKey(Key) then
+    Self.Add(Key, Value);
+end;
+
+procedure TPosition.SetIt(const aX: Integer; const aY: Integer);
+begin
+  x := aX;
+  y := aY;
+end;
+
+procedure TPosition.AddDelta(const aX, aY: Integer);
+begin
+  x := x + aX;
+  y := y + aY;
+end;
 
 end.

@@ -13,10 +13,6 @@ type
     cbb1: TComboBox;
     procedure FormCreate(Sender: TObject);
     procedure btnSolveClick(Sender: TObject);
-  private
-    function GetAdventOfCodeName(const aDayIndex: string): string;
-  public
-    { Public declarations }
   end;
 
 var
@@ -36,7 +32,7 @@ begin
 
   try
     for AdventOfCode in AdventOfCodeClasses Do
-      cbb1.Items.AddObject(GetAdventOfCodeName(AOCUtils.DayIndexFromClassName(AdventOfCode.ClassName)), TObject(AdventOfCode));
+      cbb1.Items.AddObject('Day ' + AOCUtils.DayIndexFromClassName(AdventOfCode.ClassName), TObject(AdventOfCode));
   finally
     AdventOfCodeClasses.Free;
   end;
@@ -50,15 +46,6 @@ end;
 procedure TForm1.btnSolveClick(Sender: TObject);
 begin
   AOCUtils.DoAdventOfCode(TAdventOfCodeRef(Cbb1.Items.Objects[cbb1.ItemIndex]));
-end;
-
-function TForm1.GetAdventOfCodeName(const aDayIndex: string): string;
-var dummy: Integer;
-begin
-  if TryStrToInt(aDayIndex, Dummy) then
-    Result := 'Day ' + aDayIndex
-  else
-    Result := 'Day 0 ' + aDayIndex;
 end;
 
 end.

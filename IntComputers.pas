@@ -8,21 +8,40 @@ uses
   system.Diagnostics, AOCBase, RegularExpressions, System.DateUtils, system.StrUtils,
   system.Math;
 
+type TParameterMode=(PositionMode, ImmediateMode);
+
+type IInstruction = interface
+  function Opcode: Integer;
+  function ParameterMode(Const aIndex: Integer): TParameterMode;
+end;
+
+type TInstruction = class(TInterfacedObject, IInstruction)
+  private
+    Parametermodes: TDictionary<Integer, TParameterMode>;
+    FOpcode: Integer;
+    procedure AddParameterMode(const aInstruction: string; Const aIndex: Integer);
+  public
+    constructor Create(aInstruction: Integer);
+    destructor Destroy; override;
+    function Opcode: Integer;
+    function ParameterMode(Const aIndex: Integer): TParameterMode;
+end;
+
 type TBasicIntComputer = class(TPersistent)
-protected
-  Fprogram: TDictionary<Integer, Integer>;
-  FOriginalProgram: TDictionary<Integer, Integer>;
-  MemPos: Integer;
-  function GetParam(Const aIndex: Integer; Const aCommand: String): Integer;
 private
-  function CanRun: Boolean; virtual;
-  procedure ProcessCommand(aCommand: String); virtual;
+  MemPos: Integer;
+  Fprogram: TDictionary<Integer, Integer>;
+  function CanProcess: Boolean; virtual;
+  function GetParam(Const aIndex: Integer; Const aInstruction: IInstruction): Integer;
+  procedure ProcessInstruction(const aInstruction: IInstruction); virtual;
+  procedure JumpIf(Const JumpIfZero: Boolean; const aInstruction: IInstruction);
+  procedure WriteMemoryAtOffset(Const OffsetFromMempos, ValueToWrite: Integer);
 public
   LastOutput: Integer;
   constructor Create(Input: TDictionary<Integer, Integer>);
   destructor Destroy; override;
 
-  function Run: Integer;
+  function Run: Integer; virtual;
   function Istopped: Boolean;
   function GetMemory(Const MemoryIndex: Integer): Integer;
   procedure WriteMemory(const MemoryIndex, ValueToWrite: Integer);
@@ -32,20 +51,55 @@ end;
 type TAmplifierController = class(TBasicIntComputer)
 private
   FInternalStop: Boolean;
+  FFeedbackMode: Boolean;
   FPhaseSettingQueue: TQueue<Integer>;
-  FFeedbackMode: boolean;
-protected
-  procedure ProcessCommand(aCommand: String); override;
-  function CanRun: Boolean; override;
+  procedure ProcessInstruction(const aInstruction: IInstruction); override;
+  function CanProcess: Boolean; override;
 public
   constructor Create(Input: TDictionary<Integer, Integer>; PhaseSetting: Integer; FeedBackMode: Boolean);
   destructor Destroy; override;
-  function Run: integer; overload;
   procedure SetPhaseSetting(Const aSetting: Integer);
+  function Run: integer; override;
 end;
 
-
 implementation
+
+////////////////////////////////// TInstruction //////////////////////////////////
+
+constructor TInstruction.Create(aInstruction: Integer);
+var Instruction: string;
+begin
+  Instruction := RightStr('00000'+IntToStr(aInstruction), 5); //104 -> 00104
+  FOpcode := StrToInt(RightStr(Instruction, 2));
+  Parametermodes := TDictionary<Integer, TParameterMode>.Create;
+  AddParameterMode(Instruction, 1);
+  AddParameterMode(Instruction, 2);
+  AddParameterMode(Instruction, 3);
+end;
+
+destructor TInstruction.Destroy;
+begin
+  Parametermodes.Free;
+end;
+
+procedure TInstruction.AddParameterMode(const aInstruction: string; Const aIndex: Integer);
+var Mode: TParameterMode;
+begin
+  Mode := PositionMode;
+  if aInstruction[Length(aInstruction)-1-aIndex] = '1' then
+    Mode := ImmediateMode;
+  Parametermodes.Add(aIndex, Mode);
+end;
+
+function TInstruction.Opcode: Integer;
+begin
+  Result := FOpcode;
+end;
+
+function TInstruction.ParameterMode(Const aIndex: Integer): TParameterMode;
+begin
+  Result := Parametermodes[aIndex];
+end;
 
 ////////////////////////////////// TBasicIntComputer //////////////////////////////////
 class function TBasicIntComputer.ParseIntput(const aProgram: String): TDictionary<Integer, Integer>;
@@ -75,12 +129,12 @@ begin
 end;
 
 function TBasicIntComputer.Run: Integer;
-var Command: string;
+var Instruction: IInstruction;
 begin
- while CanRun do
+  while CanProcess do
   begin
-    Command := RightStr('00000'+IntToStr(FProgram[MemPos]), 5); //104 -> 00104
-    ProcessCommand(Command);
+    Instruction := TInstruction.Create(FProgram[MemPos]);
+    ProcessInstruction(Instruction);
   end;
 
   Result := LastOutput;
@@ -101,69 +155,53 @@ begin
   Result := Fprogram[MemoryIndex]
 end;
 
-function TBasicIntComputer.CanRun: Boolean;
+function TBasicIntComputer.CanProcess: Boolean;
 begin
   Result := Not Istopped;
 end;
 
-function TBasicIntComputer.GetParam(Const aIndex: Integer; Const aCommand: String): Integer;
+function TBasicIntComputer.GetParam(Const aIndex: Integer; Const aInstruction: IInstruction): Integer;
 begin
-  if aCommand[Length(aCommand)-1-aIndex] = '1' then
-    Result := FProgram[MemPos + aIndex]
+  case aInstruction.ParameterMode(aIndex) of
+    ImmediateMode: Result := GetMemory(MemPos + aIndex);
+    PositionMode : Result := GetMemory(GetMemory(MemPos + aIndex));
   else
-    Result := FProgram[FProgram[MemPos + aIndex]]
+    raise Exception.Create('Unknown param mode');
+  end;
 end;
 
-procedure TBasicIntComputer.ProcessCommand(aCommand: String);
-
-  function _GetParam(Const aIndex: Integer): Integer;
-  begin
-    Result := GetParam(aIndex, aCommand);
-  end;
-
+procedure TBasicIntComputer.WriteMemoryAtOffset(Const OffsetFromMempos, ValueToWrite: Integer);
 begin
-  case StrToInt(RightStr(aCommand, 2)) of
-    1: begin
-        FProgram[FProgram[MemPos + 3]] := _GetParam(1) + _GetParam(2);
-        MemPos := MemPos + 4;
-       end;
-    2: begin
-        FProgram[FProgram[MemPos + 3]] := _GetParam(1) * _GetParam(2);
-        MemPos := MemPos + 4;
-       end;
-    3: begin
-        FProgram[FProgram[MemPos + 1]] := LastOutput;
-        MemPos := MemPos + 2
-       end;
-    4: begin
-        LastOutput := _GetParam(1);
-        MemPos := MemPos + 2
-       end;
-    5: begin
-        if _GetParam(1) <> 0 then
-          MemPos := _GetParam(2)
-        else
-          MemPos := MemPos + 3
-       end;
-    6: begin
-        if _GetParam(1) = 0 then
-          MemPos := _GetParam(2)
-        else
-          MemPos := MemPos + 3;
-       end;
-    7: begin
-        FProgram[FProgram[MemPos + 3]] := Integer(_GetParam(1) < _GetParam(2));
-        MemPos := MemPos + 4;
-       end;
-    8: begin
-        FProgram[FProgram[MemPos + 3]] := Integer(_GetParam(1) = _GetParam(2));
-        MemPos := MemPos + 4;
+  WriteMemory(GetMemory(MemPos + OffsetFromMempos), ValueToWrite);
+  Inc(MemPos, OffsetFromMempos + 1);
+end;
+
+procedure TBasicIntComputer.JumpIf(Const JumpIfZero: Boolean; const aInstruction: IInstruction);
+begin
+  if (GetParam(1, aInstruction) = 0) = JumpIfZero then
+    MemPos := GetParam(2, aInstruction)
+  else
+    Inc(MemPos, 3);
+end;
+
+procedure TBasicIntComputer.ProcessInstruction(const aInstruction: IInstruction);
+begin
+  case aInstruction.Opcode of
+    01: WriteMemoryAtOffset(3, GetParam(1, aInstruction) + GetParam(2, aInstruction));
+    02: WriteMemoryAtOffset(3, GetParam(1, aInstruction) * GetParam(2, aInstruction));
+    03: WriteMemoryAtOffset(1, LastOutput);
+    04: begin
+          LastOutput := GetParam(1, aInstruction);
+          Inc(MemPos, 2);
         end;
+    05: JumpIf(False, aInstruction);
+    06: JumpIf(True, aInstruction);
+    07: WriteMemoryAtOffset(3, Integer(GetParam(1, aInstruction) < GetParam(2, aInstruction)));
+    08: WriteMemoryAtOffset(3, Integer(GetParam(1, aInstruction) = GetParam(2, aInstruction)));
   else
-    raise Exception.CreateFmt('Unknown command: %s', [aCommand]);
+    raise Exception.CreateFmt('Unknown opcode: %d', [aInstruction.Opcode]);
   end;
 end;
-
 
 ////////////////////////////////// TAmplifierController //////////////////////////////////
 constructor TAmplifierController.Create(Input: TDictionary<Integer, Integer>; PhaseSetting: Integer; FeedBackMode: Boolean);
@@ -180,31 +218,14 @@ begin
   inherited;
 end;
 
-function TAmplifierController.CanRun: Boolean;
+function TAmplifierController.CanProcess: Boolean;
 begin
   Result := Inherited and (Not FInternalStop);
 end;
 
-procedure TAmplifierController.ProcessCommand(aCommand: String);
+procedure TAmplifierController.SetPhaseSetting(Const aSetting: Integer);
 begin
-  case StrToInt(RightStr(aCommand, 2)) of
-    3: begin
-        if (FPhaseSettingQueue.Count > 0) then
-          FProgram[FProgram[MemPos + 1]] := FPhaseSettingQueue.Dequeue
-        else
-          FProgram[FProgram[MemPos + 1]] := LastOutput;
-
-        MemPos := MemPos + 2
-       end;
-    4: begin
-        LastOutput := GetParam(1, aCommand);;
-        MemPos := MemPos + 2;
-        if FFeedbackMode then
-          FInternalStop := True
-       end;
-  else
-    inherited ProcessCommand(aCommand);
-  end;
+  FPhaseSettingQueue.Enqueue(aSetting);
 end;
 
 function TAmplifierController.Run: Integer;
@@ -213,10 +234,21 @@ begin
   Result := Inherited;
 end;
 
-procedure TAmplifierController.SetPhaseSetting(Const aSetting: Integer);
+procedure TAmplifierController.ProcessInstruction(const aInstruction: IInstruction);
 begin
-  FPhaseSettingQueue.Enqueue(aSetting);
+  case aInstruction.Opcode of // Amplifier has overriden opcode's 3&4
+    03: if (FPhaseSettingQueue.Count > 0) then
+          WriteMemoryAtOffset(1, FPhaseSettingQueue.Dequeue)
+        else
+          WriteMemoryAtOffset(1, LastOutput);
+    04: begin
+          LastOutput := GetParam(1, aInstruction);;
+          Inc(Mempos, 2);
+          FInternalStop := FFeedbackMode; //In FeedbackMode set the stopflag so the processor will halt in the TBasicIntComputer.Run method
+        end;
+  else
+    inherited ProcessInstruction(aInstruction);
+  end;
 end;
-
 
 end.

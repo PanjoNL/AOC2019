@@ -20,7 +20,7 @@ type
 type
   TAdventOfCodeDay2 = class(TAdventOfCode)
   protected
-    Fprogram: TDictionary<Integer, Integer>;
+    Fprogram: TDictionary<Integer, int64>;
     function RunProgram(const aNoun, aVerb: Integer): Integer;
     function SolveA: Variant; override;
     function SolveB: Variant; override;
@@ -54,12 +54,11 @@ type
 type
   TAdventOfCodeDay5 = class(TAdventOfCode)
   protected
-    Fprogram: TDictionary<Integer, Integer>;
+    Fprogram: TDictionary<Integer, int64>;
     procedure BeforeSolve; override;
     procedure AfterSolve; override;
     function SolveA: Variant; override;
     function SolveB: Variant; override;
-    function RunProgram(const StartOutputParam: Integer): Integer;
   end;
 
 type
@@ -75,7 +74,7 @@ type
 type
   TAdventOfCodeDay7 = class(TAdventOfCode)
   protected
-    Fprogram: TDictionary<Integer, Integer>;
+    Fprogram: TDictionary<Integer, int64>;
     procedure BeforeSolve; override;
     procedure AfterSolve; override;
     function SolveA: Variant; override;
@@ -94,6 +93,15 @@ type
     function SolveA: Variant; override;
     function SolveB: Variant; override;
   end;
+
+type TAdventOfCodeDay9 = class(TAdventOfCode)
+  protected
+    Fprogram: TDictionary<Integer, int64>;
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+end;
 
 implementation
 
@@ -310,22 +318,14 @@ end;
 
 function TAdventOfCodeDay5.SolveA: Variant;
 begin
-  Result := RunProgram(1); //2845163
+  Result := TBasicIntComputer.RunProgram(Fprogram, 1);  //2845163
 end;
 
 function TAdventOfCodeDay5.SolveB: Variant;
 begin
-  Result := RunProgram(5); //9436229
+  Result := TBasicIntComputer.RunProgram(Fprogram, 5); //9436229
 end;
 
-function TAdventOfCodeDay5.RunProgram(const StartOutputParam: Integer): Integer;
-var Computer: TBasicIntComputer;
-begin
-  Computer := TBasicIntComputer.Create(Fprogram);
-  Computer.LastOutput := StartOutputParam;
-  Result := Computer.Run;
-  Computer.Free;
-end;
 {$ENDREGION}
 {$Region 'TAdventOfCodeDay6'}
 procedure TAdventOfCodeDay6.BeforeSolve;
@@ -595,10 +595,31 @@ begin
   Picture.Free;
 end;
 {$ENDREGION}
+{$REGION 'TAdventOfCodeDay9'}
+procedure TAdventOfCodeDay9.BeforeSolve;
+begin
+  Fprogram := TBasicIntComputer.ParseIntput(FInput[0]);
+end;
+
+procedure TAdventOfCodeDay9.AfterSolve;
+begin
+  Fprogram.Free;
+end;
+
+function TAdventOfCodeDay9.SolveA: Variant;
+begin
+  Result := TBasicIntComputer.RunProgram(Fprogram, 1); //2789104029
+end;
+
+function TAdventOfCodeDay9.SolveB: Variant;
+begin
+  Result := TBasicIntComputer.RunProgram(Fprogram, 2); //32869
+end;
+{$ENDREGION}
 
 initialization
   RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
-    TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8
+    TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9
 
 ]);
 

@@ -8,7 +8,7 @@ uses
   system.Diagnostics, AOCBase, RegularExpressions, System.DateUtils, system.StrUtils,
   system.Math;
 
-type TParameterMode=(PositionMode, ImmediateMode);
+type TParameterMode=(PositionMode, ImmediateMode, RelativeMode);
 
 type IInstruction = interface
   function Opcode: Integer;
@@ -30,22 +30,25 @@ end;
 type TBasicIntComputer = class(TPersistent)
 private
   MemPos: Integer;
-  Fprogram: TDictionary<Integer, Integer>;
+  RelativeBase: Integer;
+  Fprogram: TDictionary<Integer, int64>;
   function CanProcess: Boolean; virtual;
-  function GetParam(Const aIndex: Integer; Const aInstruction: IInstruction): Integer;
+  function GetParam(Const aIndex: Integer; Const aInstruction: IInstruction): int64;
   procedure ProcessInstruction(const aInstruction: IInstruction); virtual;
   procedure JumpIf(Const JumpIfZero: Boolean; const aInstruction: IInstruction);
-  procedure WriteMemoryAtOffset(Const OffsetFromMempos, ValueToWrite: Integer);
+  procedure WriteMemoryAtOffset(Const aIndex, ValueToWrite: int64; const aInstruction: IInstruction);
+  function GetMemoryAdres(Const aIndex: Integer; Const aInstruction: IInstruction): int64;
 public
-  LastOutput: Integer;
-  constructor Create(Input: TDictionary<Integer, Integer>);
+  LastOutput: int64;
+  constructor Create(Input: TDictionary<Integer, int64>);
   destructor Destroy; override;
 
-  function Run: Integer; virtual;
+  function Run: int64; virtual;
   function Istopped: Boolean;
-  function GetMemory(Const MemoryIndex: Integer): Integer;
-  procedure WriteMemory(const MemoryIndex, ValueToWrite: Integer);
-  class function ParseIntput(const aProgram: String): TDictionary<Integer, Integer>;
+  function GetMemory(Const MemoryIndex: Integer): int64;
+  procedure WriteMemory(const MemoryIndex, ValueToWrite: int64);
+  class function ParseIntput(const aProgram: String): TDictionary<Integer, int64>;
+  class function RunProgram(const aProgram: TDictionary<Integer, int64>; const aStartInput: Integer): Int64;
 end;
 
 type TAmplifierController = class(TBasicIntComputer)
@@ -56,10 +59,10 @@ private
   procedure ProcessInstruction(const aInstruction: IInstruction); override;
   function CanProcess: Boolean; override;
 public
-  constructor Create(Input: TDictionary<Integer, Integer>; PhaseSetting: Integer; FeedBackMode: Boolean);
+  constructor Create(Input: TDictionary<Integer, int64>; PhaseSetting: Integer; FeedBackMode: Boolean);
   destructor Destroy; override;
   procedure SetPhaseSetting(Const aSetting: Integer);
-  function Run: integer; override;
+  function Run: int64; override;
 end;
 
 implementation
@@ -85,9 +88,14 @@ end;
 procedure TInstruction.AddParameterMode(const aInstruction: string; Const aIndex: Integer);
 var Mode: TParameterMode;
 begin
-  Mode := PositionMode;
-  if aInstruction[Length(aInstruction)-1-aIndex] = '1' then
-    Mode := ImmediateMode;
+  case StrToInt(aInstruction[Length(aInstruction)-1-aIndex]) of
+    0: Mode := PositionMode;
+    1: Mode := ImmediateMode;
+    2: Mode := RelativeMode;
+  else
+    raise Exception.Create('Unkonw opcode instruction');
+  end;
+
   Parametermodes.Add(aIndex, Mode);
 end;
 
@@ -102,25 +110,35 @@ begin
 end;
 
 ////////////////////////////////// TBasicIntComputer //////////////////////////////////
-class function TBasicIntComputer.ParseIntput(const aProgram: String): TDictionary<Integer, Integer>;
+class function TBasicIntComputer.ParseIntput(const aProgram: String): TDictionary<Integer, int64>;
 var Line: TStringList;
     i: Integer;
 begin
-  Result := TDictionary<Integer, Integer>.Create;
+  Result := TDictionary<Integer, int64>.Create;
   Line := TStringList.Create;
   Line.Delimiter := ',';
   Line.DelimitedText := aProgram;
 
   for i := 0 to Line.Count - 1 do
-    Result.Add(i, StrToInt(Line[i]));
+    Result.Add(i, StrToInt64(Line[i]));
 
   Line.Free;
 end;
 
-constructor TBasicIntComputer.Create(Input: TDictionary<Integer, Integer>);
+class function TBasicIntComputer.RunProgram(const aProgram: TDictionary<Integer, int64>; const aStartInput: Integer): Int64;
+var Computer: TBasicIntComputer;
 begin
-  FProgram := TDictionary<Integer, Integer>.Create(Input);
+  Computer := TBasicIntComputer.Create(aProgram);
+  Computer.LastOutput := aStartInput;
+  Result := Computer.Run;
+  Computer.Free;
+end;
+
+constructor TBasicIntComputer.Create(Input: TDictionary<Integer, int64>);
+begin
+  FProgram := TDictionary<Integer, int64>.Create(Input);
   MemPos := 0;
+  RelativeBase := 0;
 end;
 
 destructor TBasicIntComputer.Destroy;
@@ -128,7 +146,7 @@ begin
   FProgram.Free;
 end;
 
-function TBasicIntComputer.Run: Integer;
+function TBasicIntComputer.Run: int64;
 var Instruction: IInstruction;
 begin
   while CanProcess do
@@ -142,17 +160,18 @@ end;
 
 function TBasicIntComputer.Istopped: Boolean;
 begin
-   Result := (FProgram[MemPos] = 99);
+  Result := (FProgram[MemPos] = 99);
 end;
 
-procedure TBasicIntComputer.WriteMemory(const MemoryIndex, ValueToWrite: Integer);
+procedure TBasicIntComputer.WriteMemory(const MemoryIndex, ValueToWrite: int64);
 begin
-  Fprogram[MemoryIndex] := ValueToWrite;
+  Fprogram.AddOrSetValue(MemoryIndex, ValueToWrite);
 end;
 
-function TBasicIntComputer.GetMemory(Const MemoryIndex: Integer): Integer;
+function TBasicIntComputer.GetMemory(Const MemoryIndex: Integer): int64;
 begin
-  Result := Fprogram[MemoryIndex]
+  if not Fprogram.TryGetValue(MemoryIndex, Result) then
+    Result := 0;
 end;
 
 function TBasicIntComputer.CanProcess: Boolean;
@@ -160,20 +179,26 @@ begin
   Result := Not Istopped;
 end;
 
-function TBasicIntComputer.GetParam(Const aIndex: Integer; Const aInstruction: IInstruction): Integer;
+function TBasicIntComputer.GetMemoryAdres(Const aIndex: Integer; Const aInstruction: IInstruction): int64;
 begin
   case aInstruction.ParameterMode(aIndex) of
-    ImmediateMode: Result := GetMemory(MemPos + aIndex);
-    PositionMode : Result := GetMemory(GetMemory(MemPos + aIndex));
+    PositionMode : Result := GetMemory(MemPos + aIndex);
+    ImmediateMode: Result := MemPos + aIndex;
+    RelativeMode : Result := GetMemory(MemPos + aIndex) + RelativeBase;
   else
     raise Exception.Create('Unknown param mode');
   end;
 end;
 
-procedure TBasicIntComputer.WriteMemoryAtOffset(Const OffsetFromMempos, ValueToWrite: Integer);
+function TBasicIntComputer.GetParam(Const aIndex: Integer; Const aInstruction: IInstruction): int64;
 begin
-  WriteMemory(GetMemory(MemPos + OffsetFromMempos), ValueToWrite);
-  Inc(MemPos, OffsetFromMempos + 1);
+  Result := GetMemory(GetMemoryAdres(aIndex, aInstruction));
+end;
+
+procedure TBasicIntComputer.WriteMemoryAtOffset(Const aIndex, ValueToWrite: int64; const aInstruction: IInstruction);
+begin
+  WriteMemory(GetMemoryAdres(aIndex, aInstruction), ValueToWrite);
+  Inc(MemPos, aIndex + 1);
 end;
 
 procedure TBasicIntComputer.JumpIf(Const JumpIfZero: Boolean; const aInstruction: IInstruction);
@@ -187,24 +212,28 @@ end;
 procedure TBasicIntComputer.ProcessInstruction(const aInstruction: IInstruction);
 begin
   case aInstruction.Opcode of
-    01: WriteMemoryAtOffset(3, GetParam(1, aInstruction) + GetParam(2, aInstruction));
-    02: WriteMemoryAtOffset(3, GetParam(1, aInstruction) * GetParam(2, aInstruction));
-    03: WriteMemoryAtOffset(1, LastOutput);
+    01: WriteMemoryAtOffset(3, GetParam(1, aInstruction) + GetParam(2, aInstruction), aInstruction);
+    02: WriteMemoryAtOffset(3, GetParam(1, aInstruction) * GetParam(2, aInstruction), aInstruction);
+    03: WriteMemoryAtOffset(1, LastOutput, aInstruction);
     04: begin
           LastOutput := GetParam(1, aInstruction);
           Inc(MemPos, 2);
         end;
     05: JumpIf(False, aInstruction);
     06: JumpIf(True, aInstruction);
-    07: WriteMemoryAtOffset(3, Integer(GetParam(1, aInstruction) < GetParam(2, aInstruction)));
-    08: WriteMemoryAtOffset(3, Integer(GetParam(1, aInstruction) = GetParam(2, aInstruction)));
+    07: WriteMemoryAtOffset(3, Integer(GetParam(1, aInstruction) < GetParam(2, aInstruction)), aInstruction);
+    08: WriteMemoryAtOffset(3, Integer(GetParam(1, aInstruction) = GetParam(2, aInstruction)), aInstruction);
+    09: begin
+          Inc(RelativeBase, GetParam(1, aInstruction));
+          Inc(MemPos, 2);
+        end;
   else
     raise Exception.CreateFmt('Unknown opcode: %d', [aInstruction.Opcode]);
   end;
 end;
 
 ////////////////////////////////// TAmplifierController //////////////////////////////////
-constructor TAmplifierController.Create(Input: TDictionary<Integer, Integer>; PhaseSetting: Integer; FeedBackMode: Boolean);
+constructor TAmplifierController.Create(Input: TDictionary<Integer, int64>; PhaseSetting: Integer; FeedBackMode: Boolean);
 begin
   Inherited Create(Input);
   FPhaseSettingQueue := TQueue<Integer>.Create;
@@ -228,7 +257,7 @@ begin
   FPhaseSettingQueue.Enqueue(aSetting);
 end;
 
-function TAmplifierController.Run: Integer;
+function TAmplifierController.Run: int64;
 begin
   FInternalStop := False;
   Result := Inherited;
@@ -238,9 +267,9 @@ procedure TAmplifierController.ProcessInstruction(const aInstruction: IInstructi
 begin
   case aInstruction.Opcode of // Amplifier has overriden opcode's 3&4
     03: if (FPhaseSettingQueue.Count > 0) then
-          WriteMemoryAtOffset(1, FPhaseSettingQueue.Dequeue)
+          WriteMemoryAtOffset(1, FPhaseSettingQueue.Dequeue, aInstruction)
         else
-          WriteMemoryAtOffset(1, LastOutput);
+          WriteMemoryAtOffset(1, LastOutput, aInstruction);
     04: begin
           LastOutput := GetParam(1, aInstruction);;
           Inc(Mempos, 2);

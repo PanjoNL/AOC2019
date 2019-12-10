@@ -28,7 +28,6 @@ object Form1: TForm1
     Top = 8
     Width = 145
     Height = 21
-    Sorted = True
     TabOrder = 1
   end
 end

@@ -4,7 +4,7 @@ interface
 
 uses
   inifiles, System.SysUtils, System.Generics.Collections, AOCBase, RTTI, System.Classes,
-  System.Net.HttpClient, System.Net.urlclient;
+  System.Net.HttpClient, System.Net.urlclient, system.Generics.Defaults;
 
 type AOCconfig = Record
   BaseUrl: string;
@@ -35,7 +35,10 @@ type
     y: Integer;
     procedure SetIt(const aX, aY: integer);
     procedure AddDelta(const aX, aY: Integer);
+    function Equals(Const Other: TPosition): Boolean;
   end;
+
+function GCD(Number1, Number2: integer): integer;
 
 implementation
 
@@ -58,6 +61,7 @@ var
   ctx: TRttiContext;
   lType: TRttiType;
   AdventOfCode: TAdventOfCodeRef;
+  Comparison: TComparison<TAdventOfCodeRef>;
 begin
   result := TList<TAdventOfCodeRef>.Create;
   ctx := TRttiContext.Create;
@@ -71,6 +75,14 @@ begin
       if AdventOfCode.ClassName <> TAdventOfCode.ClassName then
         Result.Add(adventOfCode);
     end;
+
+  Comparison :=
+    function(const Left, Right: TAdventOfCodeRef): Integer
+    begin
+      Result := StrToInt(AOCUtils.DayIndexFromClassName(Left.ClassName)) -
+                StrToInt(AOCUtils.DayIndexFromClassName(Right.ClassName));
+    end;
+  Result.Sort(TComparer<TAdventOfCodeRef>.Construct(Comparison));
 end;
 
 class function AOCUtils.DayIndexFromClassName(Const aClassName: String): String;
@@ -92,12 +104,11 @@ begin
 end;
 
 class procedure AOCUtils.DownLoadPuzzleInput(var InputList: TStrings; Const DayIndex: String);
-var
-  HttpClient: THttpClient;
-  lHeader: TNetHeader;
-  Headers: TNetHeaders;
-  MemoryStream: TMemoryStream;
-  Url: string;
+var HttpClient: THttpClient;
+    lHeader: TNetHeader;
+    Headers: TNetHeaders;
+    MemoryStream: TMemoryStream;
+    Url: string;
 begin
   Url := AOCUtils.Config.BaseUrl+'/day/'+DayIndex+'/input';
   WriteLn('Downloading puzzle data from ' + Url);
@@ -133,5 +144,32 @@ begin
   x := x + aX;
   y := y + aY;
 end;
+
+function TPosition.Equals(Const Other: TPosition): Boolean;
+begin
+  Result := (x = Other.x) and (y = Other.y);
+end;
+
+function GCD(Number1, Number2: integer): integer;
+var
+  Temp: integer;
+begin
+  if Number1 < 0 then Number1 := -Number1;
+  if Number2 < 0 then Number2 := -Number2;
+
+  repeat
+    if Number1 < Number2 then
+      begin
+        Temp := Number1;
+        Number1 := Number2;
+        Number2 := Temp;
+      end;
+
+    Number1 := Number1 mod Number2;
+  until (Number1 = 0);
+
+  result := Number2;
+end;
+
 
 end.

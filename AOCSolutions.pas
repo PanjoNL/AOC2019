@@ -103,6 +103,27 @@ type TAdventOfCodeDay9 = class(TAdventOfCode)
     function SolveB: Variant; override;
 end;
 
+type
+  TAdventOfCodeDay10 = class(TAdventOfCode)
+  protected
+    Map: TDictionary<TPosition, Boolean>;
+    MonitoringStation : TPosition; //Needed for part b
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+    function ScanAstroids(Const ScanLocation: TPosition; OutPutMap: TDictionary<Extended, TPosition>): Integer;
+    function CalcAstroidAngle(Station, Astroid: TPosition): Extended;
+  end;
+
+type TAdventOfCodeDay11 = class(TAdventOfCode)
+  protected
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+end;
+
 implementation
 
 {$Region 'TAdventOfCodeDay1'}
@@ -616,11 +637,137 @@ begin
   Result := TBasicIntComputer.RunProgram(Fprogram, 2); //32869
 end;
 {$ENDREGION}
+{$REGION 'TAdventOfCodeDay10'}
+procedure TAdventOfCodeDay10.BeforeSolve;
+var Position: TPosition;
+    i, j: Integer;
+begin
+  Map := TDictionary<TPosition, Boolean>.Create;
+  for i := 0 to FInput.Count - 1 do
+    for j := 1 to Length(FInput[i]) do
+    begin
+      Position.SetIt(j-1, i );
+      Map.Add(Position, FInput[i][j] = '#')
+    end;
+end;
+
+procedure TAdventOfCodeDay10.AfterSolve;
+begin
+  Map.Free;
+end;
+
+function TAdventOfCodeDay10.ScanAstroids(Const ScanLocation: TPosition; OutPutMap: TDictionary<Extended, TPosition>): Integer;
+var Position, TempPosistion: TPosition;
+    D, DeltaX, DeltaY, DistanceX, DistanceY: Integer;
+begin
+  result := 0;
+  for Position in Map.Keys do
+  begin
+    if Position.Equals(ScanLocation) or not Map[Position] then
+      Continue;
+
+    DistanceX := ScanLocation.x - Position.x;
+    DistanceY := ScanLocation.y - Position.y;
+    DeltaX := 0;
+    DeltaY := 0;
+
+    if DistanceX = 0 then
+      DeltaY := Sign(DistanceY)
+    else if DistanceY = 0 then
+      DeltaX := Sign(DistanceX)
+    else
+    begin
+      D := GCD(DistanceX, DistanceY);
+      DeltaX := Round(DistanceX / D);
+      DeltaY := Round(DistanceY / D);
+    end;
+
+    TempPosistion.SetIt(Position.x, Position.y);
+    TempPosistion.AddDelta(DeltaX, DeltaY);
+
+    while Map.ContainsKey(TempPosistion) do
+    begin
+      if TempPosistion.Equals(ScanLocation) then
+      begin
+        Inc(Result);
+        if Assigned(OutPutMap) then
+          OutPutMap.Add(CalcAstroidAngle(ScanLocation, Position), Position);
+        break;
+      end;
+
+      if Map[TempPosistion] then
+        Break;
+
+      TempPosistion.AddDelta(DeltaX, DeltaY);
+    end;
+  end;
+end;
+
+function TAdventOfCodeDay10.CalcAstroidAngle(Station, Astroid: TPosition): Extended;
+begin
+  Result := ArcTan2(Astroid.x-Station.x, Station.y-Astroid.y);
+  if Result < 0 then
+    Result := Result + 2*Pi;
+end;
+
+function TAdventOfCodeDay10.SolveA: Variant;
+var Position: TPosition;
+    Temp: Integer;
+begin
+  Result := 0;
+  for Position in Map.Keys do
+    if Map[Position] then //Must be build on an astroid
+    begin
+      Temp := ScanAstroids(Position, nil);
+      Result := Max(Result, Temp); //303
+      if Result = Temp then
+        MonitoringStation := Position;
+    end;
+end;
+
+function TAdventOfCodeDay10.SolveB: Variant;
+var VisibleAstroids: TDictionary<Extended, TPosition>;
+    AngleArray: TArray<Extended>;
+    Posistion200: TPosition;
+    i: Integer;
+    angle: Extended;
+begin
+  VisibleAstroids := TDictionary<Extended, TPosition>.Create;
+  ScanAstroids(MonitoringStation, VisibleAstroids);
+  AngleArray := VisibleAstroids.Keys.ToArray;
+  TArray.Sort<Extended>(AngleArray);
+  Posistion200 := VisibleAstroids[AngleArray[199]];
+  Result := 100*Posistion200.x + Posistion200.y; //408
+  VisibleAstroids.Free;
+end;
+
+
+{$ENDREGION}
+{$REGION 'TAdventOfCodeDay11'}
+procedure TAdventOfCodeDay11.BeforeSolve;
+begin
+
+end;
+
+procedure TAdventOfCodeDay11.AfterSolve;
+begin
+
+end;
+
+function TAdventOfCodeDay11.SolveA: Variant;
+begin
+
+end;
+
+function TAdventOfCodeDay11.SolveB: Variant;
+begin
+
+end;
+{$ENDREGION}
 
 initialization
   RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
-    TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9
-
+    TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10, TAdventOfCodeDay11
 ]);
 
 end.

@@ -31,6 +31,7 @@ type TBasicIntComputer = class(TPersistent)
 private
   MemPos: Integer;
   RelativeBase: Integer;
+  FInternalStop: Boolean;
   Fprogram: TDictionary<Integer, int64>;
   function CanProcess: Boolean; virtual;
   function GetParam(Const aIndex: Integer; Const aInstruction: IInstruction): int64;
@@ -40,11 +41,12 @@ private
   function GetMemoryAdres(Const aIndex: Integer; Const aInstruction: IInstruction): int64;
 public
   LastOutput: int64;
+  StopOnOutPut: Boolean;
   constructor Create(Input: TDictionary<Integer, int64>);
   destructor Destroy; override;
 
-  function Run: int64; virtual;
-  function Istopped: Boolean;
+  function Run: int64;
+  function IsStopped: Boolean;
   function GetMemory(Const MemoryIndex: Integer): int64;
   procedure WriteMemory(const MemoryIndex, ValueToWrite: int64);
   class function ParseIntput(const aProgram: String): TDictionary<Integer, int64>;
@@ -53,16 +55,12 @@ end;
 
 type TAmplifierController = class(TBasicIntComputer)
 private
-  FInternalStop: Boolean;
-  FFeedbackMode: Boolean;
   FPhaseSettingQueue: TQueue<Integer>;
   procedure ProcessInstruction(const aInstruction: IInstruction); override;
-  function CanProcess: Boolean; override;
 public
-  constructor Create(Input: TDictionary<Integer, int64>; PhaseSetting: Integer; FeedBackMode: Boolean);
+  constructor Create(Input: TDictionary<Integer, int64>; PhaseSetting: Integer; aStopOnOutPut: Boolean);
   destructor Destroy; override;
   procedure SetPhaseSetting(Const aSetting: Integer);
-  function Run: int64; override;
 end;
 
 implementation
@@ -149,6 +147,7 @@ end;
 function TBasicIntComputer.Run: int64;
 var Instruction: IInstruction;
 begin
+  FInternalStop := False;
   while CanProcess do
   begin
     Instruction := TInstruction.Create(FProgram[MemPos]);
@@ -158,7 +157,7 @@ begin
   Result := LastOutput;
 end;
 
-function TBasicIntComputer.Istopped: Boolean;
+function TBasicIntComputer.IsStopped: Boolean;
 begin
   Result := (FProgram[MemPos] = 99);
 end;
@@ -176,7 +175,7 @@ end;
 
 function TBasicIntComputer.CanProcess: Boolean;
 begin
-  Result := Not Istopped;
+  Result := (Not IsStopped) and (Not FInternalStop);
 end;
 
 function TBasicIntComputer.GetMemoryAdres(Const aIndex: Integer; Const aInstruction: IInstruction): int64;
@@ -218,6 +217,7 @@ begin
     04: begin
           LastOutput := GetParam(1, aInstruction);
           Inc(MemPos, 2);
+          FInternalStop := StopOnOutPut;
         end;
     05: JumpIf(False, aInstruction);
     06: JumpIf(True, aInstruction);
@@ -233,12 +233,12 @@ begin
 end;
 
 ////////////////////////////////// TAmplifierController //////////////////////////////////
-constructor TAmplifierController.Create(Input: TDictionary<Integer, int64>; PhaseSetting: Integer; FeedBackMode: Boolean);
+constructor TAmplifierController.Create(Input: TDictionary<Integer, int64>; PhaseSetting: Integer; aStopOnOutPut: Boolean);
 begin
   Inherited Create(Input);
   FPhaseSettingQueue := TQueue<Integer>.Create;
+  StopOnOutPut := aStopOnOutPut;
   FPhaseSettingQueue.Enqueue(PhaseSetting);
-  FFeedbackMode := FeedBackMode;
 end;
 
 destructor TAmplifierController.Destroy;
@@ -247,37 +247,17 @@ begin
   inherited;
 end;
 
-function TAmplifierController.CanProcess: Boolean;
-begin
-  Result := Inherited and (Not FInternalStop);
-end;
-
 procedure TAmplifierController.SetPhaseSetting(Const aSetting: Integer);
 begin
   FPhaseSettingQueue.Enqueue(aSetting);
 end;
 
-function TAmplifierController.Run: int64;
-begin
-  FInternalStop := False;
-  Result := Inherited;
-end;
-
 procedure TAmplifierController.ProcessInstruction(const aInstruction: IInstruction);
 begin
-  case aInstruction.Opcode of // Amplifier has overriden opcode's 3&4
-    03: if (FPhaseSettingQueue.Count > 0) then
-          WriteMemoryAtOffset(1, FPhaseSettingQueue.Dequeue, aInstruction)
-        else
-          WriteMemoryAtOffset(1, LastOutput, aInstruction);
-    04: begin
-          LastOutput := GetParam(1, aInstruction);;
-          Inc(Mempos, 2);
-          FInternalStop := FFeedbackMode; //In FeedbackMode set the stopflag so the processor will halt in the TBasicIntComputer.Run method
-        end;
+  if (aInstruction.Opcode = 3) and (FPhaseSettingQueue.Count > 0) then
+    WriteMemoryAtOffset(1, FPhaseSettingQueue.Dequeue, aInstruction)
   else
     inherited ProcessInstruction(aInstruction);
-  end;
 end;
 
 end.

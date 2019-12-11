@@ -8,6 +8,8 @@ uses
   system.Diagnostics, AOCBase, RegularExpressions, System.DateUtils, system.StrUtils,
   system.Math, IntComputers, uAOCUtils;
 
+type TDirection = (Up = 0, Right, Down, Left); //If updated test day 11
+  
 type
   TAdventOfCodeDay1 = class(TAdventOfCode)
   protected
@@ -118,10 +120,12 @@ type
 
 type TAdventOfCodeDay11 = class(TAdventOfCode)
   protected
+    Fprogram: TDictionary<Integer, int64>;
     procedure BeforeSolve; override;
     procedure AfterSolve; override;
     function SolveA: Variant; override;
     function SolveB: Variant; override;
+    procedure PaintPanels(PaintedPanels: TDictionary<TPosition, Integer>);
 end;
 
 implementation
@@ -504,7 +508,7 @@ begin
       Amplifiers.Add(TAmplifierController.Create(Fprogram, StrToInt(PhaseSetting[i+1]), True));
 
     InputSignal := 0;
-    while not  Amplifiers[4].Istopped do
+    while not  Amplifiers[4].IsStopped do
     begin
       for i := 0 to 4 do
       begin
@@ -729,8 +733,6 @@ function TAdventOfCodeDay10.SolveB: Variant;
 var VisibleAstroids: TDictionary<Extended, TPosition>;
     AngleArray: TArray<Extended>;
     Posistion200: TPosition;
-    i: Integer;
-    angle: Extended;
 begin
   VisibleAstroids := TDictionary<Extended, TPosition>.Create;
   ScanAstroids(MonitoringStation, VisibleAstroids);
@@ -740,28 +742,114 @@ begin
   Result := 100*Posistion200.x + Posistion200.y; //408
   VisibleAstroids.Free;
 end;
-
-
 {$ENDREGION}
 {$REGION 'TAdventOfCodeDay11'}
 procedure TAdventOfCodeDay11.BeforeSolve;
 begin
-
+  Fprogram := TBasicIntComputer.ParseIntput(FInput[0]);
 end;
 
 procedure TAdventOfCodeDay11.AfterSolve;
 begin
+  Fprogram.Free;
+end;
 
+procedure TAdventOfCodeDay11.PaintPanels(PaintedPanels: TDictionary<TPosition, Integer>);
+var CurPosistion: TPosition;
+    Computer: TBasicIntComputer;
+    Move, Instrcution: Integer;
+    Direction: TDirection;
+begin
+  Computer := TBasicIntComputer.Create(Fprogram);
+  Computer.StopOnOutPut := True;
+  Direction := Up;
+  CurPosistion.SetIt(0,0);
+  while not Computer.IsStopped do
+  begin
+    if not PaintedPanels.TryGetValue(CurPosistion, Instrcution) then
+      Instrcution := 0; //Default black
+
+     //Paint 
+    Computer.LastOutput := Instrcution;
+    PaintedPanels.AddOrSetValue(CurPosistion, Computer.Run);
+    
+    //Move
+    case Computer.Run of
+      0: Move := Ord(Direction) -1;  
+      1: Move := Ord(Direction) +1
+    else
+      raise Exception.Create('Unknown move');
+    end;
+
+    if Move > 3 then Dec(Move, 4);
+    if Move < 0 then Inc(Move, 4);
+
+    Direction := TDirection(Move);
+    case Direction of
+      Up:    CurPosistion.AddDelta(0, 1);
+      down:  CurPosistion.AddDelta(0, -1);
+      Left:  CurPosistion.AddDelta(-1, 0);
+      Right: CurPosistion.AddDelta(1, 0);
+    end;    
+  end;
+  Computer.Free;
 end;
 
 function TAdventOfCodeDay11.SolveA: Variant;
+var PaintedPanels: TDictionary<TPosition, integer>;
 begin
-
+  PaintedPanels := TDictionary<TPosition, integer>.Create;
+  PaintPanels(PaintedPanels);
+  Result := PaintedPanels.Count; //2469
+  PaintedPanels.Free;
 end;
 
 function TAdventOfCodeDay11.SolveB: Variant;
+var CurPosistion: TPosition;
+    PaintedPanels: TDictionary<TPosition, integer>;
+    MaxX, MaxY, MinX, MinY, X ,Y: Integer;
+    Line: string;
+    OutPut: TStringList;
 begin
+  PaintedPanels := TDictionary<TPosition, integer>.Create;
 
+  CurPosistion.SetIt(0,0);
+  PaintedPanels.Add(CurPosistion, 1);
+  PaintPanels(PaintedPanels);
+
+  MaxX := -MaxInt;
+  MaxY := -MaxInt;
+  MinX := MaxInt;
+  MinY := MaxInt;
+  for CurPosistion in PaintedPanels.Keys do
+  begin
+    MaxX := Max(MaxX, CurPosistion.X);
+    MinX := Min(MinX, CurPosistion.X);
+    MaxY := Max(MaxY, CurPosistion.Y);
+    MinY := Min(MinY, CurPosistion.Y);
+  end;
+
+  OutPut := TStringList.Create;
+  for Y := MaxY downto MinY do
+  begin
+    Line := '';
+    for x := MinX to MaxX do
+    begin
+      CurPosistion.SetIt(x, y);
+      if PaintedPanels.ContainsKey(CurPosistion) and (PaintedPanels[CurPosistion] = 1) then
+        Line := Line + '#'
+      else
+        Line := Line + ' ' ;
+    end;
+
+    OutPut.Add(Line);
+    Writeln(Line);
+  end;
+  
+  OutPut.SaveToFile(SaveFilePath);
+  Result := Format('Solution saved at: %s', [SaveFilePath]);
+  OutPut.Free;
+  PaintedPanels.Free;
 end;
 {$ENDREGION}
 

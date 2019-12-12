@@ -128,10 +128,24 @@ type TAdventOfCodeDay11 = class(TAdventOfCode)
     procedure PaintPanels(PaintedPanels: TDictionary<TPosition, Integer>);
 end;
 
+type TMoon = class
+public
+  X, Y, Z, VelocityX, VelocityY, VelocityZ: Integer;
+  constructor Create(const MoonCoordinates: String);
+  procedure CalcGravity(OtherMoon: TMoon);
+  procedure ApplyVelocity;
+  function CalcEnergy: Integer;
+end;
+
+type TAdventOfCodeDay12 = class(TAdventOfCode)
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+end;
+
 implementation
 
 {$Region 'TAdventOfCodeDay1'}
-
 function TAdventOfCodeDay1.NeededFeul(const Mass: Integer): Integer;
 begin
   Result := Trunc(Mass / 3) - 2;
@@ -162,7 +176,6 @@ begin
 end;
 {$ENDREGION}
 {$Region 'TAdventOfCodeDay2'}
-
 procedure TAdventOfCodeDay2.BeforeSolve;
 begin
   Fprogram := TBasicIntComputer.ParseIntput(FInput[0]);
@@ -203,7 +216,6 @@ begin
 end;
 {$ENDREGION}
 {$Region 'TAdventOfCodeDay3'}
-
 procedure TAdventOfCodeDay3.BeforeSolve;
 begin
   PointsL := LoadPoints(FInput[0]);
@@ -845,17 +857,165 @@ begin
     OutPut.Add(Line);
     Writeln(Line);
   end;
-  
+
   OutPut.SaveToFile(SaveFilePath);
   Result := Format('Solution saved at: %s', [SaveFilePath]);
   OutPut.Free;
   PaintedPanels.Free;
 end;
 {$ENDREGION}
+{$REGION 'TMoon'}
+constructor TMoon.Create(const MoonCoordinates: String);
+var Line: TStringList;
+begin
+  Line := TStringList.Create;
+  Line.Delimiter := ',';
+  Line.DelimitedText := Copy(MoonCoordinates, 2, Length(MoonCoordinates)-2);
+
+  X := StrToInt(RightStr(Line[0], Length(Line[0])-2));
+  Y := StrToInt(RightStr(Line[1], Length(Line[1])-2));
+  Z := StrToInt(RightStr(Line[2], Length(Line[2])-2));
+  VelocityX := 0;
+  VelocityY := 0;
+  VelocityZ := 0;
+  Line.Free;
+end;
+
+procedure TMoon.CalcGravity(OtherMoon: TMoon);
+
+  function _Calc(This, Other: integer): integer;
+  begin
+    if This = Other then
+      Result := 0
+    else if This > Other then
+      Result := -1
+    else
+      Result := 1;
+  end;
+
+begin
+  Inc(VelocityX, _Calc(X, OtherMoon.X));
+  Inc(VelocityY, _Calc(Y, OtherMoon.Y));
+  Inc(VelocityZ, _Calc(Z, OtherMoon.Z));
+end;
+
+procedure TMoon.ApplyVelocity;
+begin
+  Inc(X, VelocityX);
+  Inc(Y, VelocityY);
+  Inc(Z, VelocityZ)
+end;
+
+function TMoon.CalcEnergy: Integer;
+begin
+  Result := (Abs(X) + Abs(Y) + Abs(Z)) * (Abs(VelocityX) + Abs(VelocityY) + Abs(VelocityZ));
+end;
+{$ENDREGION}
+{$REGION 'TAdventOfCodeDay12'}
+function TAdventOfCodeDay12.SolveA: Variant;
+var Moons: TList<TMoon>;
+    Moon, OtherMoon: TMoon;
+    i: Integer;
+begin
+  Moons := TList<TMoon>.Create;
+  for i := 0 to FInput.Count -1 do
+    Moons.Add(TMoon.Create(FInput[i]));
+
+  for i := 1 to 1000 do
+  begin
+    for Moon in Moons do
+      for OtherMoon in Moons do
+        Moon.CalcGravity(OtherMoon);
+
+    for Moon in Moons do
+      Moon.ApplyVelocity;
+  end;
+
+  Result := 0;
+  for Moon in Moons do
+  begin
+    Inc(Result, Moon.CalcEnergy); //12490
+    Moon.Free;
+  end;
+
+  Moons.Free;
+end;
+
+function TAdventOfCodeDay12.SolveB: Variant;
+var Moons: TList<TMoon>;
+    Moon, OtherMoon: TMoon;
+    MoonStringX, MoonStringY, MoonStringZ: string;
+    SeenDictionaryX, SeenDictionaryY, SeenDictionaryZ: TDictionary<string, Integer>;
+    i, Counter: Integer;
+    CycleTimeX, CycleTimeY, CycleTimeZ, Temp: Int64;
+
+  procedure _DoCheck(Const MoonString: String; SeenDictionary: TDictionary<string, Integer>; var CycleTime: Int64);
+  begin
+    if CycleTime > 0 then
+      Exit;
+
+    if SeenDictionary.ContainsKey(MoonString) then
+      CycleTime := Counter - SeenDictionary[MoonString]
+    else
+      SeenDictionary.Add(MoonString, Counter);
+  end;
+
+begin
+  Counter := 0;
+  CycleTimeX := -1;
+  CycleTimeY := -1;
+  CycleTimeZ := -1;
+  SeenDictionaryX := TDictionary<string, Integer>.Create;
+  SeenDictionaryY := TDictionary<string, Integer>.Create;
+  SeenDictionaryZ := TDictionary<string, Integer>.Create;
+
+  Moons := TList<TMoon>.Create;
+  for i := 0 to FInput.Count -1 do
+    Moons.Add(TMoon.Create(FInput[i]));
+
+  while (CycleTimeX < 0) or (CycleTimeY < 0) or (CycleTimeZ < 0) do
+  begin
+    MoonStringX := '';
+    MoonStringY := '';
+    MoonStringZ := '';
+    for Moon in Moons do
+    begin
+      MoonStringX := Format('%s%d#%d#)', [MoonStringX, Moon.X, Moon.VelocityX]);
+      MoonStringY := Format('%s%d#%d#)', [MoonStringY, Moon.Y, Moon.VelocityY]);
+      MoonStringZ := Format('%s%d#%d#)', [MoonStringZ, Moon.Z, Moon.VelocityZ]);
+
+      for OtherMoon in Moons do
+        Moon.CalcGravity(OtherMoon);
+    end;
+
+    _DoCheck(MoonStringX, SeenDictionaryX, CycleTimeX);
+    _DoCheck(MoonStringY, SeenDictionaryY, CycleTimeY);
+    _DoCheck(MoonStringZ, SeenDictionaryZ, CycleTimeZ);
+
+    for Moon in Moons do
+      Moon.ApplyVelocity;
+
+    Inc(Counter);
+  end;
+
+  Temp := round((CycleTimeX*CycleTimeY)/GCD(CycleTimeX, CycleTimeY));
+  Result := Round((Temp*CycleTimeZ)/GCD(Temp, CycleTimeZ)); //392733896255168
+
+  for Moon in Moons do
+    Moon.Free;
+
+  Moons.Free;
+  SeenDictionaryX.Free;
+  SeenDictionaryY.Free;
+  SeenDictionaryZ.Free;
+end;
+{$ENDREGION}
 
 initialization
   RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
-    TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10, TAdventOfCodeDay11
+    TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10, TAdventOfCodeDay11,
+    TAdventOfCodeDay12
+
 ]);
 
 end.

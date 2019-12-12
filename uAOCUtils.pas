@@ -38,7 +38,7 @@ type
     function Equals(Const Other: TPosition): Boolean;
   end;
 
-function GCD(Number1, Number2: integer): integer;
+function GCD(Number1, Number2: int64): int64;
 
 implementation
 
@@ -150,9 +150,8 @@ begin
   Result := (x = Other.x) and (y = Other.y);
 end;
 
-function GCD(Number1, Number2: integer): integer;
-var
-  Temp: integer;
+function GCD(Number1, Number2: int64): int64;
+var Temp: int64;
 begin
   if Number1 < 0 then Number1 := -Number1;
   if Number2 < 0 then Number2 := -Number2;
@@ -170,6 +169,5 @@ begin
 
   result := Number2;
 end;
-
 
 end.

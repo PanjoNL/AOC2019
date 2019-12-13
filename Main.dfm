@@ -30,4 +30,13 @@ object Form1: TForm1
     Height = 21
     TabOrder = 1
   end
+  object btnTest: TButton
+    Left = 8
+    Top = 66
+    Width = 145
+    Height = 25
+    Caption = 'Test all'
+    TabOrder = 2
+    OnClick = btnTestClick
+  end
 end

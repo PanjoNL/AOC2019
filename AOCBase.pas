@@ -24,12 +24,14 @@ type TAdventOfCode = class(TPersistent)
     function MakeFilePath(const aFileName: String): string;
     function DayIndex: String;
     procedure DoProcedure(ProcedureToRun: TProcedureToRun; const aDisplayName: String);
-    function DoFunction(FuntionToRun: TFunctionToRun; const aDisplayName: string; Out TicksTaken: Int64): string;
+    function DoFunction(FuntionToRun: TFunctionToRun; const aDisplayName: string; Out TicksTaken: Int64): String;
     procedure LoadInput;
     procedure WriteTicksToDebug(Const aFunctionName: string; Const aStartTick: Int64);
+    procedure InternalSolve(Out SolutionA, SolutionB: string; out TimeA, TimeB: Int64);
   public
   { Public declarations }
     procedure Solve;
+    procedure Test(Out SolutionA, SolutionB: String);
   end;
 
 implementation
@@ -104,7 +106,7 @@ begin
   WriteTicksToDebug(aDisplayName, StartTick);
 end;
 
-function TAdventOfCode.DoFunction(FuntionToRun: TFunctionToRun; const aDisplayName: string; Out TicksTaken: Int64): string;
+function TAdventOfCode.DoFunction(FuntionToRun: TFunctionToRun; const aDisplayName: string; Out TicksTaken: Int64): String;
 var StartTick: Int64;
 begin
   StartTick := GetTickCount;
@@ -136,14 +138,10 @@ end;
 
 procedure TAdventOfCode.Solve;
 var TimeA, TimeB, StartTime, TotalTime: Int64;
-    SolutionA, SolutionB: string;
+    SolutionA, SolutionB: String;
 begin
   StartTime := GetTickCount;
-
-  DoProcedure(BeforeSolve, 'BeforeSolve');
-  SolutionA := DoFunction(SolveA, 'SolveA', TimeA);
-  SolutionB := DoFunction(SolveB, 'SolveB', TimeB);
-  DoProcedure(AfterSolve, 'AfterSolve');
+  InternalSolve(SolutionA, SolutionB, TimeA, TimeB);
 
   TotalTime := GetTickCount - StartTime;
 
@@ -155,6 +153,20 @@ begin
                  'Total execution time: %d ms.' + #10#13 +
                  'Copy to clipboard?', [SolutionB, TimeB, TotalTime]), mtInformation, [mbYes, mbNo], 0) <> Ord(mbNo)) then
     Clipboard.AsText := SolutionB;
+end;
+
+procedure TAdventOfCode.InternalSolve(Out SolutionA, SolutionB: String; out TimeA, TimeB: Int64);
+begin
+  DoProcedure(BeforeSolve, 'BeforeSolve');
+  SolutionA := DoFunction(SolveA, 'SolveA', TimeA);
+  SolutionB := DoFunction(SolveB, 'SolveB', TimeB);
+  DoProcedure(AfterSolve, 'AfterSolve');
+end;
+
+procedure TAdventOfCode.Test(Out SolutionA, SolutionB: String);
+var Dummy: Int64;
+begin
+  InternalSolve(SolutionA, SolutionB, Dummy, Dummy);
 end;
 
 end.

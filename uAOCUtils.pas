@@ -71,9 +71,11 @@ begin
     then
     begin
       AdventOfCode := TAdventOfCodeRef(TRttiInstanceType(lType).MetaclassType);
-      Writeln('Found '+ AdventOfCode.ClassName);
       if AdventOfCode.ClassName <> TAdventOfCode.ClassName then
+      begin
+        Writeln('Found '+ AdventOfCode.ClassName);
         Result.Add(adventOfCode);
+      end;
     end;
 
   Comparison :=

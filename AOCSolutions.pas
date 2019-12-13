@@ -484,7 +484,7 @@ begin
       InputSignal := Amplifier.Run;
       Amplifier.Free;
     end;
-    Result := Max(Result, InputSignal);
+    Result := Max(Result, InputSignal); //38500
   end;
   PhaseSettings.Free;
 end;
@@ -988,7 +988,7 @@ begin
     Computer.Run; //Run untill X-output
     Computer.Run; //Run untill Y-Output
     if Computer.Run = 2 then //Block
-      Inc(Result);
+      Inc(Result); //273
   end;
 
   Computer.Free;

@@ -143,6 +143,15 @@ type TAdventOfCodeDay12 = class(TAdventOfCode)
     function SolveB: Variant; override;
 end;
 
+type TAdventOfCodeDay13 = class(TAdventOfCode)
+  protected
+    Fprogram: TDictionary<Integer, int64>;
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+end;
+
 implementation
 
 {$Region 'TAdventOfCodeDay1'}
@@ -1010,11 +1019,78 @@ begin
   SeenDictionaryZ.Free;
 end;
 {$ENDREGION}
+{$REGION 'TAdventOfCodeDay13'}
+procedure TAdventOfCodeDay13.BeforeSolve;
+begin
+  Fprogram := TBasicIntComputer.ParseIntput(FInput[0]);
+end;
 
+procedure TAdventOfCodeDay13.AfterSolve;
+begin
+  Fprogram.Free;
+end;
+
+function TAdventOfCodeDay13.SolveA: Variant;
+var Tiles: TDictionary<TPosition, Integer>;
+    Computer: TBasicIntComputer;
+    X, Y: Integer;
+    Posistion: TPosition;
+begin
+  Tiles := TDictionary<TPosition, Integer>.Create;
+  Computer := TBasicIntComputer.Create(Fprogram);
+  Computer.StopOnOutPut := True;
+  while Not Computer.IsStopped do
+  begin
+    X := Computer.Run;
+    Y := Computer.Run;
+    Posistion.SetIt(X, Y);
+    Tiles.AddOrSetValue(Posistion, Computer.Run);
+  end;
+
+  Result := 0;
+  for X in Tiles.Values do
+    if X = 2 then //Block
+      inc(Result); //273
+
+  Tiles.Free;
+  Computer.Free;
+end;
+
+function TAdventOfCodeDay13.SolveB: Variant;
+var Computer: TBasicIntComputer;
+    X, Y, BallX, PaddleX, Tile: Integer;
+begin
+  BallX := 0;
+  PaddleX := 0;
+  Result := 0;
+
+  Computer := TBasicIntComputer.Create(Fprogram);
+  Computer.StopOnOutPut := True;
+  Computer.WriteMemory(0, 2);
+
+  while Not Computer.IsStopped do
+  begin
+    Computer.LastOutput := Sign(BallX - PaddleX);
+
+    X := Computer.Run;
+    Y := Computer.Run;
+    Tile := Computer.Run;
+
+    if (X = -1) and (y = 0) then
+      Result := Tile //13140
+    else
+    case Tile of
+      3: PaddleX := X; //Paddle
+      4: BallX := X; //Block
+    end;
+  end;
+  Computer.Free;
+end;
+{$ENDREGION}
 initialization
   RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
     TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10, TAdventOfCodeDay11,
-    TAdventOfCodeDay12
+    TAdventOfCodeDay12, TAdventOfCodeDay13
 
 ]);
 

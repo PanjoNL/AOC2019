@@ -56,9 +56,6 @@ type
 type
   TAdventOfCodeDay5 = class(TAdventOfCode)
   protected
-    Fprogram: TDictionary<Integer, int64>;
-    procedure BeforeSolve; override;
-    procedure AfterSolve; override;
     function SolveA: Variant; override;
     function SolveB: Variant; override;
   end;
@@ -98,9 +95,6 @@ type
 
 type TAdventOfCodeDay9 = class(TAdventOfCode)
   protected
-    Fprogram: TDictionary<Integer, int64>;
-    procedure BeforeSolve; override;
-    procedure AfterSolve; override;
     function SolveA: Variant; override;
     function SolveB: Variant; override;
 end;
@@ -120,9 +114,6 @@ type
 
 type TAdventOfCodeDay11 = class(TAdventOfCode)
   protected
-    Fprogram: TDictionary<Integer, int64>;
-    procedure BeforeSolve; override;
-    procedure AfterSolve; override;
     function SolveA: Variant; override;
     function SolveB: Variant; override;
     procedure PaintPanels(PaintedPanels: TDictionary<TPosition, Integer>);
@@ -145,9 +136,6 @@ end;
 
 type TAdventOfCodeDay13 = class(TAdventOfCode)
   protected
-    Fprogram: TDictionary<Integer, int64>;
-    procedure BeforeSolve; override;
-    procedure AfterSolve; override;
     function SolveA: Variant; override;
     function SolveB: Variant; override;
 end;
@@ -352,26 +340,15 @@ begin
 end;
 {$ENDREGION}
 {$Region 'TAdventOfCodeDay5'}
-procedure TAdventOfCodeDay5.BeforeSolve;
-begin
-  Fprogram := TBasicIntComputer.ParseIntput(FInput[0]);
-end;
-
-procedure TAdventOfCodeDay5.AfterSolve;
-begin
-  Fprogram.Free;
-end;
-
 function TAdventOfCodeDay5.SolveA: Variant;
 begin
-  Result := TBasicIntComputer.RunProgram(Fprogram, 1);  //2845163
+  Result := TBasicIntComputer.RunProgram(FInput[0], 1);  //2845163
 end;
 
 function TAdventOfCodeDay5.SolveB: Variant;
 begin
-  Result := TBasicIntComputer.RunProgram(Fprogram, 5); //9436229
+  Result := TBasicIntComputer.RunProgram(FInput[0], 5); //9436229
 end;
-
 {$ENDREGION}
 {$Region 'TAdventOfCodeDay6'}
 procedure TAdventOfCodeDay6.BeforeSolve;
@@ -642,24 +619,14 @@ begin
 end;
 {$ENDREGION}
 {$REGION 'TAdventOfCodeDay9'}
-procedure TAdventOfCodeDay9.BeforeSolve;
-begin
-  Fprogram := TBasicIntComputer.ParseIntput(FInput[0]);
-end;
-
-procedure TAdventOfCodeDay9.AfterSolve;
-begin
-  Fprogram.Free;
-end;
-
 function TAdventOfCodeDay9.SolveA: Variant;
 begin
-  Result := TBasicIntComputer.RunProgram(Fprogram, 1); //2789104029
+  Result := TBasicIntComputer.RunProgram(FInput[0], 1); //2789104029
 end;
 
 function TAdventOfCodeDay9.SolveB: Variant;
 begin
-  Result := TBasicIntComputer.RunProgram(Fprogram, 2); //32869
+  Result := TBasicIntComputer.RunProgram(FInput[0], 2); //32869
 end;
 {$ENDREGION}
 {$REGION 'TAdventOfCodeDay10'}
@@ -765,23 +732,13 @@ begin
 end;
 {$ENDREGION}
 {$REGION 'TAdventOfCodeDay11'}
-procedure TAdventOfCodeDay11.BeforeSolve;
-begin
-  Fprogram := TBasicIntComputer.ParseIntput(FInput[0]);
-end;
-
-procedure TAdventOfCodeDay11.AfterSolve;
-begin
-  Fprogram.Free;
-end;
-
 procedure TAdventOfCodeDay11.PaintPanels(PaintedPanels: TDictionary<TPosition, Integer>);
 var CurPosistion: TPosition;
     Computer: TBasicIntComputer;
     Move, Instrcution: Integer;
     Direction: TDirection;
 begin
-  Computer := TBasicIntComputer.Create(Fprogram);
+  Computer := TBasicIntComputer.Create(FInput[0]);
   Computer.StopOnOutPut := True;
   Direction := Up;
   CurPosistion.SetIt(0,0);
@@ -1020,51 +977,32 @@ begin
 end;
 {$ENDREGION}
 {$REGION 'TAdventOfCodeDay13'}
-procedure TAdventOfCodeDay13.BeforeSolve;
-begin
-  Fprogram := TBasicIntComputer.ParseIntput(FInput[0]);
-end;
-
-procedure TAdventOfCodeDay13.AfterSolve;
-begin
-  Fprogram.Free;
-end;
-
 function TAdventOfCodeDay13.SolveA: Variant;
-var Tiles: TDictionary<TPosition, Integer>;
-    Computer: TBasicIntComputer;
-    X, Y: Integer;
-    Posistion: TPosition;
+var Computer: TBasicIntComputer;
 begin
-  Tiles := TDictionary<TPosition, Integer>.Create;
-  Computer := TBasicIntComputer.Create(Fprogram);
+  Result := 0;
+  Computer := TBasicIntComputer.Create(FInput[0]);
   Computer.StopOnOutPut := True;
   while Not Computer.IsStopped do
   begin
-    X := Computer.Run;
-    Y := Computer.Run;
-    Posistion.SetIt(X, Y);
-    Tiles.AddOrSetValue(Posistion, Computer.Run);
+    Computer.Run; //Run untill X-output
+    Computer.Run; //Run untill Y-Output
+    if Computer.Run = 2 then //Block
+      Inc(Result);
   end;
 
-  Result := 0;
-  for X in Tiles.Values do
-    if X = 2 then //Block
-      inc(Result); //273
-
-  Tiles.Free;
   Computer.Free;
 end;
 
 function TAdventOfCodeDay13.SolveB: Variant;
 var Computer: TBasicIntComputer;
-    X, Y, BallX, PaddleX, Tile: Integer;
+    X, Y, BallX, PaddleX: Integer;
 begin
   BallX := 0;
   PaddleX := 0;
   Result := 0;
 
-  Computer := TBasicIntComputer.Create(Fprogram);
+  Computer := TBasicIntComputer.Create(FInput[0]);
   Computer.StopOnOutPut := True;
   Computer.WriteMemory(0, 2);
 
@@ -1074,14 +1012,13 @@ begin
 
     X := Computer.Run;
     Y := Computer.Run;
-    Tile := Computer.Run;
 
     if (X = -1) and (y = 0) then
-      Result := Tile //13140
+      Result := Computer.Run //13140
     else
-    case Tile of
+    case Computer.Run of
       3: PaddleX := X; //Paddle
-      4: BallX := X; //Block
+      4: BallX := X; //Ball
     end;
   end;
   Computer.Free;

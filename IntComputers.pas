@@ -42,7 +42,8 @@ private
 public
   LastOutput: int64;
   StopOnOutPut: Boolean;
-  constructor Create(Input: TDictionary<Integer, int64>);
+  constructor Create(aProgram: TDictionary<Integer, int64>); overload;
+  constructor Create(Const Input: String); overload;
   destructor Destroy; override;
 
   function Run: int64;
@@ -50,7 +51,7 @@ public
   function GetMemory(Const MemoryIndex: Integer): int64;
   procedure WriteMemory(const MemoryIndex, ValueToWrite: int64);
   class function ParseIntput(const aProgram: String): TDictionary<Integer, int64>;
-  class function RunProgram(const aProgram: TDictionary<Integer, int64>; const aStartInput: Integer): Int64;
+  class function RunProgram(const aProgram: string; aStartInput: Integer): Int64;
 end;
 
 type TAmplifierController = class(TBasicIntComputer)
@@ -123,7 +124,7 @@ begin
   Line.Free;
 end;
 
-class function TBasicIntComputer.RunProgram(const aProgram: TDictionary<Integer, int64>; const aStartInput: Integer): Int64;
+class function TBasicIntComputer.RunProgram(const aProgram: string; aStartInput: Integer): Int64;
 var Computer: TBasicIntComputer;
 begin
   Computer := TBasicIntComputer.Create(aProgram);
@@ -132,9 +133,17 @@ begin
   Computer.Free;
 end;
 
-constructor TBasicIntComputer.Create(Input: TDictionary<Integer, int64>);
+constructor TBasicIntComputer.Create(Const Input: String);
+var ComputerProgram :TDictionary<Integer, Int64>;
 begin
-  FProgram := TDictionary<Integer, int64>.Create(Input);
+  ComputerProgram := ParseIntput(Input);
+  Create(ComputerProgram);
+  ComputerProgram.Free;
+end;
+
+constructor TBasicIntComputer.Create(aProgram: TDictionary<Integer, int64>);
+begin
+  FProgram := TDictionary<Integer, int64>.Create(aProgram);
   MemPos := 0;
   RelativeBase := 0;
 end;

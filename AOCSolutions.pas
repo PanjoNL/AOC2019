@@ -8,8 +8,13 @@ uses
   system.Diagnostics, AOCBase, RegularExpressions, System.DateUtils, system.StrUtils,
   system.Math, IntComputers, uAOCUtils;
 
-type TDirection = (Up = 0, Right, Down, Left); //If updated test day 11
-  
+type TDirection = (Up = 0, Right, Down, Left);
+
+type TReaction = record
+  NumberOfProducts: Int64;
+  NeededIngredients: TDictionary<String, Int64>
+end;
+
 type
   TAdventOfCodeDay1 = class(TAdventOfCode)
   protected
@@ -138,6 +143,18 @@ type TAdventOfCodeDay13 = class(TAdventOfCode)
   protected
     function SolveA: Variant; override;
     function SolveB: Variant; override;
+end;
+
+type TAdventOfCodeDay14 = class(TAdventOfCode)
+  private
+    OldRoundMode: TRoundingMode;
+    Reactions: TDictionary<String, TReaction>;
+    function CalcOreAmountNeededForFeul(Const FuelAmmount: Int64): Int64;
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
 end;
 
 implementation
@@ -1024,10 +1041,106 @@ begin
   Computer.Free;
 end;
 {$ENDREGION}
+{$Region 'TAdventOfCodeDay14'}
+procedure TAdventOfCodeDay14.BeforeSolve;
+var Line: TStringList;
+    i, j: integer;
+    Reaction: TReaction;
+begin
+  Reactions := TDictionary<String, TReaction>.Create;
+
+  Line := TStringList.Create;
+  Line.Delimiter := ',';
+  for i := 0 to FInput.Count -1 do
+  begin
+    Line.DelimitedText := FInput[i];
+    Reaction.NumberOfProducts := StrToInt64(Line[Line.Count - 2]);
+    Reaction.NeededIngredients := TDictionary<String, Int64>.Create;
+    for j := 0 to Trunc((Line.Count - 4)/2) do
+      Reaction.NeededIngredients.Add(Line[j*2+1], StrToInt64(Line[j*2]));
+
+    Reactions.Add(Line[Line.Count - 1], Reaction);
+  end;
+
+  Line.Free;
+  OldRoundMode := GetRoundMode;
+  SetRoundMode(rmUp);
+end;
+
+procedure TAdventOfCodeDay14.AfterSolve;
+var Reaction: TReaction;
+begin
+  SetRoundMode(OldRoundMode);
+  for Reaction in Reactions.Values do
+      Reaction.NeededIngredients.Free;
+  Reactions.Free;
+end;
+
+function TAdventOfCodeDay14.CalcOreAmountNeededForFeul(Const FuelAmmount: Int64): Int64;
+var Storage: TDictionary<String, Int64>;
+
+  procedure _CalcOreNeeded(Const ProductName: String; NumberOfUntisToProduce: Int64; Var OreNeeded: Int64);
+  var Reaction: TReaction;
+      Pair: TPair<string, Int64>;
+      Batches: Int64;
+  begin
+    if not Storage.ContainsKey(ProductName) then
+      Storage.Add(ProductName, -NumberOfUntisToProduce)
+    else
+      Storage[ProductName] := Storage[ProductName] - NumberOfUntisToProduce;
+
+    if Storage[ProductName] < 0 then
+    begin
+      Reaction := Reactions[ProductName];
+      Batches := Round(-Storage[ProductName] / Reaction.NumberOfProducts);
+      for Pair in Reaction.NeededIngredients do
+      begin
+        if Pair.Key <> 'ORE' then
+          _CalcOreNeeded(Pair.Key, Batches*Pair.Value, OreNeeded)
+        else
+         Inc(OreNeeded, Batches*Pair.Value);
+      end;
+      Storage[ProductName] := Storage[ProductName] + Batches*Reaction.NumberOfProducts;
+    end;
+  end;
+
+begin
+  Result := 0;
+  Storage := TDictionary<string, Int64>.Create;
+  _CalcOreNeeded('FUEL', FuelAmmount, Result);
+  Storage.Free;
+end;
+
+function TAdventOfCodeDay14.SolveA: Variant;
+begin
+  Result := CalcOreAmountNeededForFeul(1); //522031
+end;
+
+function TAdventOfCodeDay14.SolveB: Variant;
+var SearchBase, Search: int64;
+begin
+  Search := 0;
+  SearchBase := Round(Power(2, 18));
+  Result := 0;
+  while Result = 0 do
+  begin
+    Inc(Search, SearchBase);
+
+    if CalcOreAmountNeededForFeul(Search) > 1000000000000 then
+    begin
+      if SearchBase = 1 then
+        Result := Search - 1; //3566577
+
+      Dec(Search, SearchBase); //Back to previous state
+      SearchBase := Round(SearchBase / 2); //divide searchbase by 2
+    end;
+  end;
+end;
+{$ENDREGION}
 initialization
   RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
     TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10, TAdventOfCodeDay11,
-    TAdventOfCodeDay12, TAdventOfCodeDay13
+    TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14
 
 ]);
 

@@ -9,6 +9,7 @@ uses
   system.Math, IntComputers, uAOCUtils;
 
 type TDirection = (Up = 0, Right, Down, Left);
+type TBotMovement = (North = 1, South, West, East);
 
 type TReaction = record
   NumberOfProducts: Int64;
@@ -149,12 +150,22 @@ type TAdventOfCodeDay14 = class(TAdventOfCode)
   private
     OldRoundMode: TRoundingMode;
     Reactions: TDictionary<String, TReaction>;
-    function CalcOreAmountNeededForFeul(Const FuelAmmount: Int64): Int64;
+    function CalcOreAmountNeededForFuel(Const FuelAmmount: Int64): Int64;
   protected
     function SolveA: Variant; override;
     function SolveB: Variant; override;
     procedure BeforeSolve; override;
     procedure AfterSolve; override;
+end;
+
+type TAdventOfCodeDay15 = class(TAdventOfCode)
+  private
+    OxygenSystemPosistion: TPosition;
+    PathTakenToOxygenSytem: String;
+    procedure FindPath(const RouteTaken: string; const StartPosition: TPosition; Seen: TDictionary<TPosition, Integer>; Computer: TBasicIntComputer);
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
 end;
 
 implementation
@@ -1076,18 +1087,18 @@ begin
   Reactions.Free;
 end;
 
-function TAdventOfCodeDay14.CalcOreAmountNeededForFeul(Const FuelAmmount: Int64): Int64;
+function TAdventOfCodeDay14.CalcOreAmountNeededForFuel(Const FuelAmmount: Int64): Int64;
 var Storage: TDictionary<String, Int64>;
 
-  procedure _CalcOreNeeded(Const ProductName: String; NumberOfUntisToProduce: Int64; Var OreNeeded: Int64);
+  procedure _CalcOreNeeded(Const ProductName: String; NumberOfUnitsToProduce: Int64; Var OreNeeded: Int64);
   var Reaction: TReaction;
       Pair: TPair<string, Int64>;
       Batches: Int64;
   begin
     if not Storage.ContainsKey(ProductName) then
-      Storage.Add(ProductName, -NumberOfUntisToProduce)
+      Storage.Add(ProductName, - NumberOfUnitsToProduce)
     else
-      Storage[ProductName] := Storage[ProductName] - NumberOfUntisToProduce;
+      Storage[ProductName] := Storage[ProductName] - NumberOfUnitsToProduce;
 
     if Storage[ProductName] < 0 then
     begin
@@ -1113,7 +1124,7 @@ end;
 
 function TAdventOfCodeDay14.SolveA: Variant;
 begin
-  Result := CalcOreAmountNeededForFeul(1); //522031
+  Result := CalcOreAmountNeededForFuel(1); //522031
 end;
 
 function TAdventOfCodeDay14.SolveB: Variant;
@@ -1126,7 +1137,7 @@ begin
   begin
     Inc(Search, SearchBase);
 
-    if CalcOreAmountNeededForFeul(Search) > 1000000000000 then
+    if CalcOreAmountNeededForFuel(Search) > 1000000000000 then
     begin
       if SearchBase = 1 then
         Result := Search - 1; //3566577
@@ -1137,10 +1148,118 @@ begin
   end;
 end;
 {$ENDREGION}
+{$Region 'TAdventOfCodeDay15'}
+procedure TAdventOfCodeDay15.FindPath(const RouteTaken: string; const StartPosition: TPosition; Seen: TDictionary<TPosition, Integer>; Computer: TBasicIntComputer);
+
+  procedure _Run(Direction: TBotMovement; Route: String);
+  var StatusCode, StepsTaken, DeltaX, DeltaY: Integer;
+  begin
+    Computer.LastOutput := Ord(Direction);
+    StepsTaken := Seen[StartPosition];
+    Route := Format('%s#%d', [Route, Ord(Direction)]);
+    StatusCode := Computer.Run;
+
+    if StatusCode = 0 then
+      Exit; //Hit a wall, stop
+
+    DeltaX := 0;
+    DeltaY := 0;
+    case Direction of
+      North: DeltaY := 1;
+      South: DeltaY := -1 ;
+      East:  DeltaX := -1;
+      West:  DeltaX := 1;
+    end;
+    StartPosition.AddDelta(DeltaX, DeltaY);
+
+    if StatusCode = 2 then
+    begin
+      OxygenSystemPosistion := StartPosition;
+      PathTakenToOxygenSytem := Route;
+    end;
+
+    if not (Seen.ContainsKey(StartPosition) and (Seen[StartPosition] <= StepsTaken +1)) then
+    begin //If we visited this location for the first time, or we have a more effective route, find all the paths from this posistion
+      Seen.AddOrSetValue(StartPosition, StepsTaken+1);
+      FindPath(Route, StartPosition, Seen, Computer);
+    end;
+
+    //Take a step back
+    StartPosition.AddDelta(-DeltaX, -DeltaY);
+    if (Direction in [North, West]) then
+      Direction := TBotMovement(Ord(Direction)+1)
+    else
+      Direction := TBotMovement(Ord(Direction)-1);
+
+    Computer.LastOutput := Ord(Direction);
+    Assert(Computer.Run <> 0);
+  end;
+
+begin
+  _Run(North, RouteTaken);
+  _Run(East, RouteTaken);
+  _Run(South, RouteTaken);
+  _Run(West, RouteTaken);
+end;
+
+function TAdventOfCodeDay15.SolveA: Variant;
+var Position: TPosition;
+    Computer: TBasicIntComputer;
+    Seen: TDictionary<TPosition, Integer>;
+begin
+  Computer := TBasicIntComputer.Create(FInput[0]);
+  Computer.StopOnOutPut := True;
+
+  Seen := TDictionary<TPosition, Integer>.Create;
+  Position.SetIt(0, 0);
+  Seen.Add(Position, 0);
+
+  FindPath('', Position, Seen, Computer);
+  Result := Seen[OxygenSystemPosistion]; //300
+
+  Computer.Free;
+  Seen.Free;
+end;
+
+function TAdventOfCodeDay15.SolveB: Variant;
+var Computer: TBasicIntComputer;
+    Seen: TDictionary<TPosition, Integer>;
+    Line: TStringList;
+    i: Integer;
+begin
+  Computer := TBasicIntComputer.Create(FInput[0]);
+  Computer.StopOnOutPut := True;
+
+  //Move the robot to the oxygen system
+  Line := TStringList.Create;
+  Line.Delimiter := '#';
+  Line.DelimitedText := PathTakenToOxygenSytem; //From part a
+  for i := 1 to Line.Count -1 do
+  begin
+    Computer.LastOutput := StrToInt(Line[i]);
+    Assert(Computer.Run <> 0);
+  end;
+  Assert(Computer.LastOutput = 2);
+  Line.Free;
+
+  //Find the distance to all locations
+  Seen := TDictionary<TPosition, Integer>.Create;
+  Seen.Add(OxygenSystemPosistion, 0); //From part a
+  FindPath('', OxygenSystemPosistion, Seen, Computer);
+
+  Result := 0;
+  for i in Seen.Values do
+    Result := Max(Result, i);
+
+  Seen.Free;
+  Computer.Free;
+end;
+{$ENDREGION}
+
 initialization
   RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
     TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10, TAdventOfCodeDay11,
-    TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14
+    TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14, TAdventOfCodeDay15
 
 ]);
 

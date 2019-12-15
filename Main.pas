@@ -50,7 +50,6 @@ begin
   AOCUtils.DoAdventOfCode(TAdventOfCodeRef(Cbb1.Items.Objects[cbb1.ItemIndex]));
 end;
 
-
 procedure TForm1.btnTestClick(Sender: TObject);
 begin
   AOCTests.RunTests;

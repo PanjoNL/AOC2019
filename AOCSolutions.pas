@@ -876,21 +876,10 @@ begin
 end;
 
 procedure TMoon.CalcGravity(OtherMoon: TMoon);
-
-  function _Calc(This, Other: integer): integer;
-  begin
-    if This = Other then
-      Result := 0
-    else if This > Other then
-      Result := -1
-    else
-      Result := 1;
-  end;
-
 begin
-  Inc(VelocityX, _Calc(X, OtherMoon.X));
-  Inc(VelocityY, _Calc(Y, OtherMoon.Y));
-  Inc(VelocityZ, _Calc(Z, OtherMoon.Z));
+  Inc(VelocityX, Sign(OtherMoon.X - X));
+  Inc(VelocityY, Sign(OtherMoon.Y - Y));
+  Inc(VelocityZ, Sign(OtherMoon.Z - Z));
 end;
 
 procedure TMoon.ApplyVelocity;

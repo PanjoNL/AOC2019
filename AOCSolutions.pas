@@ -168,6 +168,12 @@ type TAdventOfCodeDay15 = class(TAdventOfCode)
     function SolveB: Variant; override;
 end;
 
+type TAdventOfCodeDay16 = class(TAdventOfCode)
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+end;
+
 implementation
 
 {$Region 'TAdventOfCodeDay1'}
@@ -1244,11 +1250,91 @@ begin
   Computer.Free;
 end;
 {$ENDREGION}
+{$REGION 'TAdventOfCodeDay16'}
+function TAdventOfCodeDay16.SolveA: Variant;
+
+  function pattern(Const LineIndex, NumberIndex: int64): int64;
+  begin
+    case (NumberIndex mod (LineIndex*4)) div LineIndex of
+      0: Result := 0;
+      1: Result := 1;
+      2: Result := 0;
+      3: Result := -1;
+    else
+      raise Exception.Create('UnKnow partern');
+    end;
+  end;
+
+var i, j, Temp, Counter: int64;
+    Input, NewInput: TList<Integer>;
+begin
+  Input := TList<Integer>.Create;
+  NewInput := TList<Integer>.Create;
+
+  for i := 1 to Length(FInput[0]) do
+    Input.Add(StrToInt(FInput[0][i]));
+
+  Counter := 0;
+  while Counter < 100 do
+  begin
+    Inc(Counter);
+
+    NewInput.Clear;
+    for i := 0 to Input.Count-1 do
+    begin
+      Temp := 0;
+      for j := 0 to Input.Count - 1 do
+        Inc(Temp, pattern(i+1, j+1)*Input[j]);
+
+      NewInput.Add(Abs(Temp) mod 10);
+    end;
+
+    Input.Clear;
+    Input.AddRange(NewInput);
+  end;
+
+  Result := '';
+  for i := 0 to 7 do
+    Result := Result + IntToStr(Input[i]); //42945143
+end;
+
+function TAdventOfCodeDay16.SolveB: Variant;
+var i, j, Counter, Offset, Temp: Int64;
+    Input: TList<Int64>;
+begin
+  Input := TList<Int64>.Create;
+  Offset := StrToInt(LeftStr(FInput[0], 7));
+
+  for i := 1 to 100000 do
+    for j := 1 to Length(FInput[0]) do
+      Input.Add(StrToInt64(FInput[0][j]));
+
+  Counter := 0;
+  while Counter < 100 do
+  begin
+    Inc(Counter);
+    Temp := 0;
+    for i := Input.Count -1  downto Offset-1   do
+    begin
+      Inc(Temp, Input[i]);
+      Input[i] := Temp mod 10;
+    end;
+
+    Writeln(Counter);
+  end;
+
+  Result := '';
+  for i := Offset to Offset + 7 do
+    Result := Result + IntToStr(Input[i]);  //99974970
+
+  Input.Free;
+end;
+{$ENDREGION}
 
 initialization
   RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
     TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10, TAdventOfCodeDay11,
-    TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14, TAdventOfCodeDay15
+    TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14, TAdventOfCodeDay15, TAdventOfCodeDay16
 
 ]);
 

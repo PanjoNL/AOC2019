@@ -8,7 +8,7 @@ uses
 
 type AOCTest = record
   AOCClass: TAdventOfCodeRef;
-  ExpectedSolutionA, ExpectedSolutionB: String;
+  ExpectedSolutionA, ExpectedSolutionB, OverRidenTestInput: String;
 end;
 
 type AOCTests = class
@@ -16,7 +16,7 @@ public
   Class procedure RunTests;
 end;
 
-Const AOCTestData: array[0..14] of AOCTest =
+Const AOCTestData: array[0..15] of AOCTest =
 (
  (AOCClass: TAdventOfCodeDay1; ExpectedSolutionA: '3270717'; ExpectedSolutionB: '4903193'),
  (AOCClass: TAdventOfCodeDay2; ExpectedSolutionA: '3085697'; ExpectedSolutionB: '9425'),
@@ -32,10 +32,9 @@ Const AOCTestData: array[0..14] of AOCTest =
  (AOCClass: TAdventOfCodeDay12; ExpectedSolutionA: '12490'; ExpectedSolutionB: '392733896255168'),
  (AOCClass: TAdventOfCodeDay13; ExpectedSolutionA: '273'; ExpectedSolutionB: '13140'),
  (AOCClass: TAdventOfCodeDay14; ExpectedSolutionA: '522031'; ExpectedSolutionB: '3566577'),
- (AOCClass: TAdventOfCodeDay15; ExpectedSolutionA: '300'; ExpectedSolutionB: '312')
-);
-
-
+ (AOCClass: TAdventOfCodeDay15; ExpectedSolutionA: '300'; ExpectedSolutionB: '312'),
+ (AOCClass: TAdventOfCodeDay16; ExpectedSolutionA: '52486276'; ExpectedSolutionB: '53553731'; OverRidenTestInput: '03081770884921959731165446850517')
+ );
 
 implementation
 
@@ -64,7 +63,7 @@ begin
 
     StartTick := GetTickCount;
     AdventOfCode := Test.AOCClass.Create;
-    AdventOfCode.Test(SolutionA, SolutionB);
+    AdventOfCode.Test(SolutionA, SolutionB, Test.OverRidenTestInput);
     AdventOfCode.Free;
 
     _Check('Part a', Test.ExpectedSolutionA, SolutionA);

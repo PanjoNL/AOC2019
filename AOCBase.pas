@@ -31,7 +31,7 @@ type TAdventOfCode = class(TPersistent)
   public
   { Public declarations }
     procedure Solve;
-    procedure Test(Out SolutionA, SolutionB: String);
+    procedure Test(Out SolutionA, SolutionB: String; Const OverRidenTestInput: String);
   end;
 
 implementation
@@ -163,9 +163,15 @@ begin
   DoProcedure(AfterSolve, 'AfterSolve');
 end;
 
-procedure TAdventOfCode.Test(Out SolutionA, SolutionB: String);
+procedure TAdventOfCode.Test(Out SolutionA, SolutionB: String; Const OverRidenTestInput: String);
 var Dummy: Int64;
 begin
+  if OverRidenTestInput <> '' then
+  begin
+    FInput.Clear;
+    FInput.Add(OverRidenTestInput);
+  end;
+
   InternalSolve(SolutionA, SolutionB, Dummy, Dummy);
 end;
 

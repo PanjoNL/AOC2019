@@ -9,6 +9,7 @@ uses
   system.Math;
 
 type TParameterMode=(PositionMode, ImmediateMode, RelativeMode);
+type TOnNeedInput = function: Integer of object;
 
 type IInstruction = interface
   function Opcode: Integer;
@@ -42,6 +43,7 @@ private
 public
   LastOutput: int64;
   StopOnOutPut: Boolean;
+  OnNeedInput: TOnNeedInput;
   constructor Create(aProgram: TDictionary<Integer, int64>); overload;
   constructor Create(Const Input: String); overload;
   destructor Destroy; override;
@@ -222,7 +224,12 @@ begin
   case aInstruction.Opcode of
     01: WriteMemoryAtOffset(3, GetParam(1, aInstruction) + GetParam(2, aInstruction), aInstruction);
     02: WriteMemoryAtOffset(3, GetParam(1, aInstruction) * GetParam(2, aInstruction), aInstruction);
-    03: WriteMemoryAtOffset(1, LastOutput, aInstruction);
+    03: begin
+          if Assigned(OnNeedInput) then
+            WriteMemoryAtOffset(1, OnNeedInput, aInstruction)
+          else
+            WriteMemoryAtOffset(1, LastOutput, aInstruction);
+        end;
     04: begin
           LastOutput := GetParam(1, aInstruction);
           Inc(MemPos, 2);

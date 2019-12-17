@@ -14,6 +14,7 @@ type AOCconfig = Record
 End;
 
 type TAdventOfCodeRef = class of TAdventOfCode;
+type TDirection = (Up = 0, Right, Down, Left);
 
 type AOCUtils = class
   public
@@ -34,8 +35,10 @@ type
     x: integer;
     y: Integer;
     procedure SetIt(const aX, aY: integer);
-    procedure AddDelta(const aX, aY: Integer);
+    function AddDelta(const aX, aY: Integer): TPosition;
     function Equals(Const Other: TPosition): Boolean;
+    function Clone: TPosition;
+    function ApplyDirection(Const aDirection: TDirection): TPosition;
   end;
 
 function GCD(Number1, Number2: int64): int64;
@@ -141,15 +144,33 @@ begin
   y := aY;
 end;
 
-procedure TPosition.AddDelta(const aX, aY: Integer);
+function TPosition.AddDelta(const aX, aY: Integer): TPosition;
 begin
   x := x + aX;
   y := y + aY;
+  Result := Self;
 end;
 
 function TPosition.Equals(Const Other: TPosition): Boolean;
 begin
   Result := (x = Other.x) and (y = Other.y);
+end;
+
+function TPosition.Clone: TPosition;
+begin
+  Result.x := Self.x;
+  Result.y := Self.y;
+end;
+
+function TPosition.ApplyDirection(Const aDirection: TDirection): TPosition;
+begin
+  case aDirection of
+    Up: AddDelta(0, -1);
+    Right: AddDelta(1, 0);
+    Down: AddDelta(0, 1);
+    Left: AddDelta(-1, 0);
+  end;
+  Result := Self
 end;
 
 function GCD(Number1, Number2: int64): int64;

@@ -8,7 +8,6 @@ uses
   system.Diagnostics, AOCBase, RegularExpressions, System.DateUtils, system.StrUtils,
   system.Math, IntComputers, uAOCUtils;
 
-type TDirection = (Up = 0, Right, Down, Left);
 type TBotMovement = (North = 1, South, West, East);
 
 type TReaction = record
@@ -172,6 +171,19 @@ type TAdventOfCodeDay16 = class(TAdventOfCode)
   protected
     function SolveA: Variant; override;
     function SolveB: Variant; override;
+end;
+
+type TAdventOfCodeDay17 = class(TAdventOfCode)
+  private
+    Map: TList<TPosition>;
+    VacuumRobotPosition: TPosition;
+    InputQueue: TQueue<Integer>;
+    function GiveInput: Integer;
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
 end;
 
 implementation
@@ -784,10 +796,10 @@ begin
      //Paint 
     Computer.LastOutput := Instrcution;
     PaintedPanels.AddOrSetValue(CurPosistion, Computer.Run);
-    
+
     //Move
     case Computer.Run of
-      0: Move := Ord(Direction) -1;  
+      0: Move := Ord(Direction) -1;
       1: Move := Ord(Direction) +1
     else
       raise Exception.Create('Unknown move');
@@ -802,7 +814,7 @@ begin
       down:  CurPosistion.AddDelta(0, -1);
       Left:  CurPosistion.AddDelta(-1, 0);
       Right: CurPosistion.AddDelta(1, 0);
-    end;    
+    end;
   end;
   Computer.Free;
 end;
@@ -1330,11 +1342,171 @@ begin
   Input.Free;
 end;
 {$ENDREGION}
+{$REGION 'TAdventOfCodeDay17'}
+procedure TAdventOfCodeDay17.BeforeSolve;
+begin
+  Map := TList<TPosition>.Create;
+  InputQueue := TQueue<Integer>.Create;
+end;
+
+procedure TAdventOfCodeDay17.AfterSolve;
+begin
+  Map.Free;
+  InputQueue.Free;
+end;
+
+function TAdventOfCodeDay17.GiveInput: Integer;
+begin
+  Result := InputQueue.Dequeue;
+end;
+
+function TAdventOfCodeDay17.SolveA: Variant;
+
+  function _IsIntersections(aPosition: TPosition): Boolean;
+  begin
+    Result := Map.ConTains(aPosition.Clone.ApplyDirection(Up))
+          and Map.ConTains(aPosition.Clone.ApplyDirection(Down))
+          and Map.ConTains(aPosition.Clone.ApplyDirection(Left))
+          and Map.ConTains(aPosition.Clone.ApplyDirection(Right))
+  end;
+
+var Position: TPosition;
+    Computer: TBasicIntComputer;
+    X, Y, OutPut: Integer;
+begin
+  Computer := TBasicIntComputer.Create(FInput[0]);
+  X := -1;
+  Y := 0;
+
+  Computer.StopOnOutPut := True;
+  while not Computer.IsStopped do
+  begin
+    Inc(X);
+    Position.SetIt(X, Y);
+
+    OutPut := Computer.Run;
+    case OutPut of
+      35: Map.Add(Position);
+      46: ; //
+      10: begin
+            X := -1;
+            Inc(Y)
+          end;
+      94: begin
+            VacuumRobotPosition := Position;
+            Map.Add(Position);
+          end
+    else
+      raise Exception.CreateFmt('Unknown output %d', [Output]);
+    end;
+  end;
+
+  Result := 0;
+  for Position in Map do
+    if _IsIntersections(Position) then
+      Inc(Result, Position.x * Position.Y);
+
+  Computer.Free;
+end;
+
+function TAdventOfCodeDay17.SolveB: Variant;
+var Position, RobotPosistion: TPosition;
+    Computer: TBasicIntComputer;
+    StepsTaken, Move: Integer;
+    Instruction: string;
+    Direction, TempDir: TDirection;
+
+  function _IsIntersection(aPosition: TPosition): Boolean;
+  var Count: integer ;
+  begin
+      Count := 0;
+      if Map.Contains(aPosition.Clone.ApplyDirection(Up)) then inc(Count);
+      if Map.Contains(aPosition.Clone.ApplyDirection(Down)) then inc(Count);
+      if Map.Contains(aPosition.Clone.ApplyDirection(Left)) then inc(Count);
+      if Map.Contains(aPosition.Clone.ApplyDirection(Right)) then inc(Count);
+      Result := Count = 3; //One of the 4 legs is already removed, so when there are 3 left its a Intersection
+  end;
+
+  procedure _FeedInstruction(Const Instruction: String);
+  var i: Integer;
+  begin
+    for i := 1 to Length(Instruction) do
+      InputQueue.Enqueue(Ord(Instruction[i]));
+    InputQueue.Enqueue(10); //Final linefeed
+  end;
+
+Var FunctionA, FunctionB, FunctionC, MainProgram: String;
+
+begin
+  Instruction := '';
+  Direction := Up;
+  StepsTaken := 0;
+  RobotPosistion := VacuumRobotPosition;
+  while Map.Count > 1 do //Final position isn't removed
+  begin
+    Position := RobotPosistion.Clone.ApplyDirection(Direction);
+
+    if Map.Contains(Position) then
+    begin
+      if not _IsIntersection(RobotPosistion) then
+        Map.Remove(RobotPosistion); //Dont remove intersections, otherwise the bot gets stuck
+
+      RobotPosistion := Position;
+      Inc(StepsTaken);
+    end
+    else
+    begin
+      if StepsTaken > 0 then //Add stepstaken to instruction
+        Instruction := Instruction + IntToStr(StepsTaken) + ',';
+      StepsTaken := 0;
+
+      Move := Ord(Direction) -1; //Left
+      if Move < 0 then Inc(Move, 4);
+        TempDir := TDirection(Move);
+
+      Position := RobotPosistion.Clone.ApplyDirection(TempDir);
+      if Map.Contains(Position) then //Try to go left
+      begin
+        Direction := TempDir;
+        Instruction := Instruction + 'L,'
+      end
+      else //Can't go left, so we should go right
+      begin
+        Move := Ord(TempDir) -2;
+        if Move < 0 then Inc(Move, 4);
+          Direction := TDirection(Move);
+
+        Instruction := Instruction + 'R,'
+      end;
+    end;
+  end;
+  Instruction := Instruction + IntToStr(StepsTaken); //Add final counter
+
+  Writeln(Instruction);
+  MainProgram := 'A,B,A,C,B,C,B,C,A,C';
+  FunctionA := 'R,12,L,6,R,12';
+  FunctionB := 'L,8,L,6,L,10';
+  FunctionC := 'R,12,L,10,L,6,R,10';
+
+  Computer := TBasicIntComputer.Create(FInput[0]);
+  Computer.OnNeedInput := GiveInput;
+  Computer.WriteMemory(0, 2);
+
+  _FeedInstruction(MainProgram);
+  _FeedInstruction(FunctionA);
+  _FeedInstruction(FunctionB);
+  _FeedInstruction(FunctionC);
+  _FeedInstruction('n');
+
+  Result  := Computer.Run;
+  Computer.Free;
+end;
+{$ENDREGION}
 
 initialization
   RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
     TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10, TAdventOfCodeDay11,
-    TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14, TAdventOfCodeDay15, TAdventOfCodeDay16
+    TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14, TAdventOfCodeDay15, TAdventOfCodeDay16, TAdventOfCodeDay17
 
 ]);
 

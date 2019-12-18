@@ -186,6 +186,12 @@ type TAdventOfCodeDay17 = class(TAdventOfCode)
     procedure AfterSolve; override;
 end;
 
+type TAdventOfCodeDay18 = class(TAdventOfCode)
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+end;
+
 implementation
 
 {$Region 'TAdventOfCodeDay1'}
@@ -1502,12 +1508,128 @@ begin
   Computer.Free;
 end;
 {$ENDREGION}
+{$REGION 'TAdventOfCodeDay18'}
+type TExplore = record
+  Position: TPosition;
+  StepsTaken: Integer;
+  CollectedKeys: string;
+end;
+
+function TAdventOfCodeDay18.SolveA: Variant;
+
+  function _StateKey(Const aPosition: TPosition; Const Keys: String): String;
+  var Line: TStringList;
+      i: Integer;
+  begin
+    Line := TStringList.Create;
+
+    for i := 1 to Length(Keys) do
+      Line.Add(Keys[i]);
+
+    Line.Sort;
+    Result := '';
+    for i := 0 to Line.Count - 1 do
+      Result := Result + Line[i];
+
+    Result := Result + IntToStr(1000*aPosition.x+aPosition.y);
+    Line.Free;
+  end;
+
+var Map: TDictionary<TPosition, Char>;
+    x, y, KeyCount: Integer;
+    Position, StartPosition: TPosition;
+    TempChar: Char;
+    ExplorationQueue: TQueue<TExplore>;
+    Explore: TExplore;
+    StateKey: String;
+    States: TDictionary<String, Integer>;
+begin
+  KeyCount := 0;
+  Map := TDictionary<TPosition, Char>.Create;
+  for y := 0 to FInput.Count-1 do
+    for x := 1 to Length(FInput[y]) do
+    begin
+      Position.SetIt(x-1, y);
+      TempChar := FInput[y][x];
+
+      if TempChar = '#' then
+        Continue;
+
+      if TempChar = '@' then
+      begin
+        StartPosition := Position;
+        TempChar := '.'
+      end;
+
+      if (TempChar = LowerCase(TempChar)) AND (TempChar <> '.') then
+        Inc(KeyCount);
+
+      Map.Add(Position, TempChar);
+    end;
+
+  Explore.Position := StartPosition;
+  Explore.CollectedKeys := '';
+  Explore.StepsTaken := 0;
+
+  ExplorationQueue := TQueue<TExplore>.Create;
+  States := TDictionary<String, Integer>.Create;
+  ExplorationQueue.Enqueue(Explore);
+
+  Result := MaxInt;
+  while ExplorationQueue.Count > 0 do
+  begin
+    Explore := ExplorationQueue.Dequeue;
+
+    Position := Explore.Position;
+    if not Map.TryGetValue(Position, TempChar) then
+      Continue;
+
+    StateKey := _StateKey(Position, Explore.CollectedKeys);
+    if States.ContainsKey(StateKey) then
+      Continue;
+    States.Add(StateKey, 1);
+
+    if (TempChar <> '.') then // its a key or a door
+    begin
+      if (TempChar = Lowercase(TempChar)) then //Its a key
+      begin
+        if not ContainsText(Explore.CollectedKeys, TempChar) then //Its a new key, add to collection
+          Explore.CollectedKeys := Explore.CollectedKeys + TempChar;
+        if Length(Explore.CollectedKeys) = KeyCount then //We have all keys!
+          Result := Min(Result, Explore.StepsTaken);
+      end
+      else //It must be a door
+        if not ContainsText(Explore.CollectedKeys, TempChar) then
+          Continue; //we dont have the key
+    end;
+
+    Explore.StepsTaken := Explore.StepsTaken + 1;
+    Explore.Position := Position.Clone.ApplyDirection(Up);
+    ExplorationQueue.Enqueue(Explore);
+    Explore.Position := Position.Clone.ApplyDirection(Down);
+    ExplorationQueue.Enqueue(Explore);
+    Explore.Position := Position.Clone.ApplyDirection(Left);
+    ExplorationQueue.Enqueue(Explore);
+    Explore.Position := Position.Clone.ApplyDirection(Right);
+    ExplorationQueue.Enqueue(Explore);
+  end;
+
+  ExplorationQueue.Free;
+  States.Free;
+  Map.Free;
+end;
+
+function TAdventOfCodeDay18.SolveB: Variant;
+begin
+  //Todo
+end;
+{$ENDREGION}
 
 initialization
   RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
     TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10, TAdventOfCodeDay11,
-    TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14, TAdventOfCodeDay15, TAdventOfCodeDay16, TAdventOfCodeDay17
-
+    TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14, TAdventOfCodeDay15, TAdventOfCodeDay16, TAdventOfCodeDay17,
+    TAdventOfCodeDay18
 ]);
 
 end.

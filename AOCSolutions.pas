@@ -15,6 +15,13 @@ type TReaction = record
   NeededIngredients: TDictionary<String, Int64>
 end;
 
+type TExploreData = record
+  Position: TPosition;
+  StepsTaken: Integer;
+  CollectedKeys: string;
+  function SetPosition(Pos: TPosition): TExploreData;
+end;
+
 type
   TAdventOfCodeDay1 = class(TAdventOfCode)
   protected
@@ -187,6 +194,8 @@ type TAdventOfCodeDay17 = class(TAdventOfCode)
 end;
 
 type TAdventOfCodeDay18 = class(TAdventOfCode)
+  private
+    function ExploreMap(Const Map: TDictionary<TPosition, char>; Const StartPosition: TPosition; Const KeysToCount: Integer): Integer;
   protected
     function SolveA: Variant; override;
     function SolveB: Variant; override;
@@ -1522,13 +1531,13 @@ begin
 end;
 {$ENDREGION}
 {$REGION 'TAdventOfCodeDay18'}
-type TExplore = record
-  Position: TPosition;
-  StepsTaken: Integer;
-  CollectedKeys: string;
+function TExploreData.SetPosition(Pos: TPosition): TExploreData;
+begin
+  Position := pos;
+  Result := Self;
 end;
 
-function TAdventOfCodeDay18.SolveA: Variant;
+function TAdventOfCodeDay18.ExploreMap(Const Map: TDictionary<TPosition, char>; Const StartPosition: TPosition; Const KeysToCount: Integer): Integer;
 
   function _StateKey(Const aPosition: TPosition; Const Keys: String): String;
   var Line: TStringList;
@@ -1548,14 +1557,65 @@ function TAdventOfCodeDay18.SolveA: Variant;
     Line.Free;
   end;
 
+var Position: TPosition;
+    TempChar: Char;
+    ExplorationQueue: TQueue<TExploreData>;
+    Explore: TExploreData;
+    StateKey: String;
+    States: TDictionary<String, Integer>;
+begin
+  Explore.Position := StartPosition;
+  Explore.CollectedKeys := '';
+  Explore.StepsTaken := 0;
+
+  ExplorationQueue := TQueue<TExploreData>.Create;
+  States := TDictionary<String, Integer>.Create;
+  ExplorationQueue.Enqueue(Explore);
+
+  Result := MaxInt;
+  while ExplorationQueue.Count > 0 do
+  begin
+    Explore := ExplorationQueue.Dequeue;
+
+    Position := Explore.Position;
+    if not Map.TryGetValue(Position, TempChar) then
+      Continue; //Position does not exist
+
+    StateKey := _StateKey(Position, Explore.CollectedKeys);
+    if States.ContainsKey(StateKey) then
+      Continue; //This state is already seen
+    States.Add(StateKey, 1);
+
+    if (TempChar <> '.') then // its a key or a door
+    begin
+      if (TempChar = Lowercase(TempChar)) then //Its a key
+      begin
+        if not ContainsText(Explore.CollectedKeys, TempChar) then //Its a new key, add to collection
+          Explore.CollectedKeys := Explore.CollectedKeys + TempChar;
+        if Length(Explore.CollectedKeys) = KeysToCount then //We have all keys!
+          Result := Min(Result, Explore.StepsTaken);
+      end
+      else //It must be a door
+        if not ContainsText(Explore.CollectedKeys, TempChar) then
+          Continue; //we dont have the key
+    end;
+
+    Explore.StepsTaken := Explore.StepsTaken + 1;
+    ExplorationQueue.Enqueue(Explore.SetPosition(Position.Clone.ApplyDirection(Up)));
+    ExplorationQueue.Enqueue(Explore.SetPosition(Position.Clone.ApplyDirection(Down)));
+    ExplorationQueue.Enqueue(Explore.SetPosition(Position.Clone.ApplyDirection(Left)));
+    ExplorationQueue.Enqueue(Explore.SetPosition(Position.Clone.ApplyDirection(Right)));
+  end;
+
+  ExplorationQueue.Free;
+  States.Free;
+end;
+
+function TAdventOfCodeDay18.SolveA: Variant;
 var Map: TDictionary<TPosition, Char>;
     x, y, KeyCount: Integer;
     Position, StartPosition: TPosition;
     TempChar: Char;
-    ExplorationQueue: TQueue<TExplore>;
-    Explore: TExplore;
-    StateKey: String;
-    States: TDictionary<String, Integer>;
 begin
   KeyCount := 0;
   Map := TDictionary<TPosition, Char>.Create;
@@ -1565,7 +1625,7 @@ begin
       Position.SetIt(x-1, y);
       TempChar := FInput[y][x];
 
-      if TempChar = '#' then
+      if TempChar = '#' then  //Dont add walls
         Continue;
 
       if TempChar = '@' then
@@ -1580,61 +1640,78 @@ begin
       Map.Add(Position, TempChar);
     end;
 
-  Explore.Position := StartPosition;
-  Explore.CollectedKeys := '';
-  Explore.StepsTaken := 0;
-
-  ExplorationQueue := TQueue<TExplore>.Create;
-  States := TDictionary<String, Integer>.Create;
-  ExplorationQueue.Enqueue(Explore);
-
-  Result := MaxInt;
-  while ExplorationQueue.Count > 0 do
-  begin
-    Explore := ExplorationQueue.Dequeue;
-
-    Position := Explore.Position;
-    if not Map.TryGetValue(Position, TempChar) then
-      Continue;
-
-    StateKey := _StateKey(Position, Explore.CollectedKeys);
-    if States.ContainsKey(StateKey) then
-      Continue;
-    States.Add(StateKey, 1);
-
-    if (TempChar <> '.') then // its a key or a door
-    begin
-      if (TempChar = Lowercase(TempChar)) then //Its a key
-      begin
-        if not ContainsText(Explore.CollectedKeys, TempChar) then //Its a new key, add to collection
-          Explore.CollectedKeys := Explore.CollectedKeys + TempChar;
-        if Length(Explore.CollectedKeys) = KeyCount then //We have all keys!
-          Result := Min(Result, Explore.StepsTaken);
-      end
-      else //It must be a door
-        if not ContainsText(Explore.CollectedKeys, TempChar) then
-          Continue; //we dont have the key
-    end;
-
-    Explore.StepsTaken := Explore.StepsTaken + 1;
-    Explore.Position := Position.Clone.ApplyDirection(Up);
-    ExplorationQueue.Enqueue(Explore);
-    Explore.Position := Position.Clone.ApplyDirection(Down);
-    ExplorationQueue.Enqueue(Explore);
-    Explore.Position := Position.Clone.ApplyDirection(Left);
-    ExplorationQueue.Enqueue(Explore);
-    Explore.Position := Position.Clone.ApplyDirection(Right);
-    ExplorationQueue.Enqueue(Explore);
-  end;
-
-  ExplorationQueue.Free;
-  States.Free;
+  Result := ExploreMap(Map, StartPosition, KeyCount); //1660
   Map.Free;
 end;
 
 function TAdventOfCodeDay18.SolveB: Variant;
+var Map: TDictionary<TPosition, char>;
+
+  function CountKeys(Const StartPosition: TPosition): Integer;
+  var Seen: TList<TPosition>;
+
+    procedure _Run(var Counter: Integer; Const Position: TPosition);
+    var ch: char;
+    begin
+      if not Map.TryGetValue(Position, ch) or Seen.Contains(Position) then
+        Exit;
+
+      Seen.Add(Position);
+
+      if ch <> '.' then
+        Inc(Counter);
+
+      _Run(Counter, Position.Clone.ApplyDirection(Up));
+      _Run(Counter, Position.Clone.ApplyDirection(Down));
+      _Run(Counter, Position.Clone.ApplyDirection(Left));
+      _Run(Counter, Position.Clone.ApplyDirection(Right));
+    end;
+
+  begin
+    Seen := TList<TPosition>.Create;
+    Result := 0;
+    _Run(Result, StartPosition);
+    Seen.Free;
+  end;
+
+var x, y: Integer;
+    Position, StartPosition: TPosition;
+    TempChar: Char;
 begin
-  //Todo
+  Map := TDictionary<TPosition, Char>.Create;
+  for y := 0 to FInput.Count-1 do
+    for x := 1 to Length(FInput[y]) do
+    begin
+      Position.SetIt(x-1, y);
+      TempChar := FInput[y][x];
+
+      if TempChar = '#' then //Dont add wall's to the map
+        Continue;
+
+      if TempChar = '@' then
+      begin
+        StartPosition := Position;
+        TempChar := '.'
+      end;
+
+      if TempChar <> LowerCase(TempChar) then  //Dont add door's to the map, assume we can reach all keys always
+        TempChar := '.';
+
+      Map.Add(Position, TempChar);
+    end;
+
+  //Adjust map
+  Map.Remove(StartPosition);
+  Map.Remove(StartPosition.Clone.ApplyDirection(Up));
+  Map.Remove(StartPosition.Clone.ApplyDirection(Down));
+  Map.Remove(StartPosition.Clone.ApplyDirection(Left));
+  Map.Remove(StartPosition.Clone.ApplyDirection(Right));
+
+  Result := ExploreMap(Map, StartPosition.Clone.AddDelta(1, 1), CountKeys(StartPosition.Clone.AddDelta(1, 1)))
+          + ExploreMap(Map, startPosition.Clone.AddDelta(-1, -1), CountKeys(StartPosition.Clone.AddDelta(-1, -1)))
+          + ExploreMap(Map, StartPosition.Clone.AddDelta(1, -1), CountKeys(StartPosition.Clone.AddDelta(1, -1)))
+          + ExploreMap(Map, StartPosition.Clone.AddDelta(-1, 1), CountKeys(StartPosition.Clone.AddDelta(-1, 1)));
+  Map.Free; //1660
 end;
 {$ENDREGION}
 {$REGION 'TAdventOfCodeDay19'}
@@ -1681,8 +1758,6 @@ end;
 function TAdventOfCodeDay19.SolveB: Variant;
 var x, y: Integer;
 begin
-  x := 10;
-  y := 0;
   Result := 0;
   while True do
   begin

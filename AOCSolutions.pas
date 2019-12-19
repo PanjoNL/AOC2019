@@ -195,7 +195,9 @@ end;
 type TAdventOfCodeDay19 = class(TAdventOfCode)
   private
     InputQueue: TQueue<Integer>;
+    Fprogram: TDictionary<Integer, int64>;
     function GiveInput: Integer;
+    function IsTractorBeam(Const aX, aY: Integer): Boolean;
   protected
     function SolveA: Variant; override;
     function SolveB: Variant; override;
@@ -1639,11 +1641,26 @@ end;
 procedure TAdventOfCodeDay19.BeforeSolve;
 begin
   InputQueue := TQueue<Integer>.Create;
+  Fprogram := TBasicIntComputer.ParseIntput(FInput[0]);
 end;
 
 procedure TAdventOfCodeDay19.AfterSolve;
 begin
   InputQueue.Free;
+  Fprogram.Free;
+end;
+
+function TAdventOfCodeDay19.IsTractorBeam(Const aX, aY: Integer): Boolean;
+var Computer: TBasicIntComputer;
+begin
+  Computer := TBasicIntComputer.Create(Fprogram);
+  Computer.StopOnOutPut := True;
+  Computer.OnNeedInput := GiveInput;
+  InputQueue.Clear;
+  InputQueue.Enqueue(aX);
+  InputQueue.Enqueue(aY);
+  Result := Computer.Run = 1;
+  Computer.Free;
 end;
 
 function TAdventOfCodeDay19.GiveInput: Integer;
@@ -1652,146 +1669,38 @@ begin
 end;
 
 function TAdventOfCodeDay19.SolveA: Variant;
-var Computer: TBasicIntComputer;
-    x, y, OUtput: Integer;
+var x, y: Integer;
 begin
-  EXIT;
-
   result := 0;
   for x := 0 to 49 do
     for y := 0 to 49 do
-    begin
-      InputQueue.Enqueue(x);
-      InputQueue.Enqueue(y);
-    end;
-
-  while InputQueue.Count >0 do
-  begin
-    Computer := TBasicIntComputer.Create(FInput[0]);
-    Computer.StopOnOutPut := True;
-    COmputer.OnNeedInput := GiveInput;
-
-    OUtput := Computer.Run;
-    case Output of
-      0: ;
-      1: Inc(result);
-      else
-        raise Exception.Createfmt('Error Message %d', [OUtput]);
-      end;
-
-    Computer.Free;
-  end;
+      if IsTractorBeam(x, y) then
+        Inc(Result); //162
 end;
 
 function TAdventOfCodeDay19.SolveB: Variant;
-var Computer: TBasicIntComputer;
-    x, y, OUtput: Integer;
-    TempQueue :TQueue<Integer>;
-    Map: TDictionary<TPosition,boolean>;
-    Position: TPosition;
-
-  function GetOutput(x,y: integer): Integer;
-  var Comp: TBasicIntComputer;
-  begin
-    Comp := TBasicIntComputer.Create(FInput[0]);
-    Comp.StopOnOutPut := True;
-    Comp.OnNeedInput := GiveInput;
-    InputQueue.Clear;
-    InputQueue.Enqueue(x);
-    InputQueue.Enqueue(y);
-    Result := Comp.Run;
-    comp.Free;
-    assert ((result = 0) or (Result =1))
-  end;
-
+var x, y: Integer;
 begin
-TempQueue := TQueue<Integer>.Create;
-  Map := TDictionary<TPosition,boolean>.create;
-//  result := 0;
-//  for x := 100 to 2000 do
-//    for y := 100 to 200 do
-//    begin
-//      InputQueue.Enqueue(x);
-//      InputQueue.Enqueue(y);
-//      TempQueue.Enqueue(x);
-//      TempQueue.Enqueue(y);
-//    end;
-
   x := 10;
   y := 0;
-  Result := MaxInt;
+  Result := 0;
   while True do
   begin
-    for x := 10 to 10000 do
-//    for y := 0 to 10000 do
+    for x := 1300 to 1500 do
     begin
       y := 0;
-      while GetOutput(x, y) = 0 do
+      while not IsTractorBeam(x, y) do
         Inc(y);
 
-      while GetOutput(x, y+99) =1 do
+      while IsTractorBeam(x, y+99) do
       begin
+        if IsTractorBeam(x,y) and IsTractorBeam(x, y+99) and IsTractorBeam(x+99, y) and IsTractorBeam(x+99, y+99) then
+          Exit(10000*x + y); //13021056
 
-      if (GetOutput(x,y) = 1) and (GetOutput(x, y+99) = 1 ) and (GetOutput(x+99, y) = 1 ) and (GetOutput(x+99, y+99) = 1 ) then
-        Exit(10000*x+y);
-      Inc(y);
+        Inc(y);
       end;
     end;
-
-
-
-//     x := Max(0, x-10);
-//    while True do // Find x
-//    begin
-//
-//      if GetOutput(x,y) = 1 then
-//        Break
-//      else
-//        Inc(x)
-//    end;
-//
-//    if (GetOutput(x, y+99) = 1 ) and (GetOutput(x+99, y) = 1 ) and (GetOutput(x+99, y+99) = 1 ) then
-//      Exit (x*10000 +y)
-//    else
-//      Inc(y)
-
-//    Computer := TBasicIntComputer.Create(FInput[0]);
-//    Computer.StopOnOutPut := True;
-//    COmputer.OnNeedInput := GiveInput;
-//
-//    x := TempQueue.Dequeue;
-//    y := TempQueue.Dequeue;
-//    Position.SetIt(x,y);
-//
-//
-//    OUtput := Computer.Run;
-//    case Output of
-//      0: ;
-//      1: Map.Add(Position, True);
-//      else
-//        raise Exception.Createfmt('Error Message %d', [OUtput]);
-//      end;
-//
-//
-//    Computer.Free;
   end;
-
-//  Result := MaxInt;
-//  for x := 0 to 2000 do
-//    for y := 0 to 200 do
-//      begin
-//        Position.SetIt(x,y);
-//        if Map.ContainsKey(Position)
-//          and Map.ContainsKey(Position.Clone.AddDelta(0, 100))
-//          and Map.ContainsKey(Position.Clone.AddDelta(100, 0)) then
-//         Result := Min(Result, 10000*x+y)
-//
-//
-//      end;
-
-
-
-
 end;
 {$ENDREGION}
 

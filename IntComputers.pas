@@ -9,7 +9,6 @@ uses
   system.Math;
 
 type TParameterMode=(PositionMode, ImmediateMode, RelativeMode);
-type TOnNeedInput = function: Integer of object;
 
 type IInstruction = interface
   function Opcode: Integer;
@@ -34,16 +33,16 @@ private
   RelativeBase: Integer;
   FInternalStop: Boolean;
   Fprogram: TDictionary<Integer, int64>;
-  function CanProcess: Boolean; virtual;
+  InputQueue: TQueue<Integer>;
+  function CanProcess: Boolean;
   function GetParam(Const aIndex: Integer; Const aInstruction: IInstruction): int64;
-  procedure ProcessInstruction(const aInstruction: IInstruction); virtual;
+  procedure ProcessInstruction(const aInstruction: IInstruction);
   procedure JumpIf(Const JumpIfZero: Boolean; const aInstruction: IInstruction);
   procedure WriteMemoryAtOffset(Const aIndex, ValueToWrite: int64; const aInstruction: IInstruction);
   function GetMemoryAdres(Const aIndex: Integer; Const aInstruction: IInstruction): int64;
 public
   LastOutput: int64;
   StopOnOutPut: Boolean;
-  OnNeedInput: TOnNeedInput;
   constructor Create(aProgram: TDictionary<Integer, int64>); overload;
   constructor Create(Const Input: String); overload;
   destructor Destroy; override;
@@ -52,18 +51,9 @@ public
   function IsStopped: Boolean;
   function GetMemory(Const MemoryIndex: Integer): int64;
   procedure WriteMemory(const MemoryIndex, ValueToWrite: int64);
+  procedure QueueInput(const Input: Integer);
   class function ParseIntput(const aProgram: String): TDictionary<Integer, int64>;
   class function RunProgram(const aProgram: string; aStartInput: Integer): Int64;
-end;
-
-type TAmplifierController = class(TBasicIntComputer)
-private
-  FPhaseSettingQueue: TQueue<Integer>;
-  procedure ProcessInstruction(const aInstruction: IInstruction); override;
-public
-  constructor Create(Input: TDictionary<Integer, int64>; PhaseSetting: Integer; aStopOnOutPut: Boolean);
-  destructor Destroy; override;
-  procedure SetPhaseSetting(Const aSetting: Integer);
 end;
 
 implementation
@@ -146,6 +136,7 @@ end;
 constructor TBasicIntComputer.Create(aProgram: TDictionary<Integer, int64>);
 begin
   FProgram := TDictionary<Integer, int64>.Create(aProgram);
+  InputQueue := TQueue<Integer>.Create;
   MemPos := 0;
   RelativeBase := 0;
 end;
@@ -153,6 +144,7 @@ end;
 destructor TBasicIntComputer.Destroy;
 begin
   FProgram.Free;
+  InputQueue.Free;
 end;
 
 function TBasicIntComputer.Run: int64;
@@ -176,6 +168,11 @@ end;
 procedure TBasicIntComputer.WriteMemory(const MemoryIndex, ValueToWrite: int64);
 begin
   Fprogram.AddOrSetValue(MemoryIndex, ValueToWrite);
+end;
+
+procedure TBasicIntComputer.QueueInput(const Input: Integer);
+begin
+  InputQueue.Enqueue(Input);
 end;
 
 function TBasicIntComputer.GetMemory(Const MemoryIndex: Integer): int64;
@@ -225,8 +222,8 @@ begin
     01: WriteMemoryAtOffset(3, GetParam(1, aInstruction) + GetParam(2, aInstruction), aInstruction);
     02: WriteMemoryAtOffset(3, GetParam(1, aInstruction) * GetParam(2, aInstruction), aInstruction);
     03: begin
-          if Assigned(OnNeedInput) then
-            WriteMemoryAtOffset(1, OnNeedInput, aInstruction)
+          if InputQueue.Count > 0 then
+            WriteMemoryAtOffset(1, InputQueue.Dequeue, aInstruction)
           else
             WriteMemoryAtOffset(1, LastOutput, aInstruction);
         end;
@@ -246,34 +243,6 @@ begin
   else
     raise Exception.CreateFmt('Unknown opcode: %d', [aInstruction.Opcode]);
   end;
-end;
-
-////////////////////////////////// TAmplifierController //////////////////////////////////
-constructor TAmplifierController.Create(Input: TDictionary<Integer, int64>; PhaseSetting: Integer; aStopOnOutPut: Boolean);
-begin
-  Inherited Create(Input);
-  FPhaseSettingQueue := TQueue<Integer>.Create;
-  StopOnOutPut := aStopOnOutPut;
-  FPhaseSettingQueue.Enqueue(PhaseSetting);
-end;
-
-destructor TAmplifierController.Destroy;
-begin
-  FPhaseSettingQueue.Free;
-  inherited;
-end;
-
-procedure TAmplifierController.SetPhaseSetting(Const aSetting: Integer);
-begin
-  FPhaseSettingQueue.Enqueue(aSetting);
-end;
-
-procedure TAmplifierController.ProcessInstruction(const aInstruction: IInstruction);
-begin
-  if (aInstruction.Opcode = 3) and (FPhaseSettingQueue.Count > 0) then
-    WriteMemoryAtOffset(1, FPhaseSettingQueue.Dequeue, aInstruction)
-  else
-    inherited ProcessInstruction(aInstruction);
 end;
 
 end.

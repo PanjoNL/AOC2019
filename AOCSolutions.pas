@@ -116,7 +116,7 @@ type
   TAdventOfCodeDay10 = class(TAdventOfCode)
   protected
     Map: TDictionary<TPosition, Boolean>;
-    MonitoringStation : TPosition; //Needed for part b
+    MonitoringStation: TPosition; //Needed for part b
     procedure BeforeSolve; override;
     procedure AfterSolve; override;
     function SolveA: Variant; override;
@@ -185,8 +185,6 @@ type TAdventOfCodeDay17 = class(TAdventOfCode)
   private
     Map: TList<TPosition>;
     VacuumRobotPosition: TPosition;
-    InputQueue: TQueue<Integer>;
-    function GiveInput: Integer;
   protected
     function SolveA: Variant; override;
     function SolveB: Variant; override;
@@ -204,9 +202,7 @@ end;
 
 type TAdventOfCodeDay19 = class(TAdventOfCode)
   private
-    InputQueue: TQueue<Integer>;
     Fprogram: TDictionary<Integer, int64>;
-    function GiveInput: Integer;
     function IsTractorBeam(Const aX, aY: Integer): Boolean;
   protected
     function SolveA: Variant; override;
@@ -559,7 +555,7 @@ function TAdventOfCodeDay7.SolveA: Variant;
 var PhaseSettings: TList<String>;
     PhaseSetting: string;
     InputSignal, i: Integer;
-    Amplifier: TAmplifierController;
+    Amplifier: TBasicIntComputer;
 begin
   Result := 0;
   PhaseSettings := GetPhaseSettings(0,4);
@@ -569,8 +565,9 @@ begin
     InputSignal := 0;
     for i := 0 to 4 do
     begin
-      Amplifier := TAmplifierController.Create(Fprogram, StrToInt(PhaseSetting[i+1]), False);
-      Amplifier.SetPhaseSetting(InputSignal);
+      Amplifier := TBasicIntComputer.Create(Fprogram);
+      Amplifier.QueueInput(StrToInt(PhaseSetting[i+1]));
+      Amplifier.QueueInput(InputSignal);
       InputSignal := Amplifier.Run;
       Amplifier.Free;
     end;
@@ -583,24 +580,30 @@ function TAdventOfCodeDay7.SolveB: Variant;
 var PhaseSettings: TList<String>;
     PhaseSetting: string;
     i, InputSignal: Integer;
-    Amplifiers: TList<TAmplifierController>;
+    Amplifiers: TList<TBasicIntComputer>;
+    Amplifier: TBasicIntComputer;
 begin
   PhaseSettings := GetPhaseSettings(5,9);
-  Amplifiers := TList<TAmplifierController>.Create;
+  Amplifiers := TList<TBasicIntComputer>.Create;
 
   Result := 0;
 
   for PhaseSetting in PhaseSettings do
   begin
     for i := 0 to 4 do
-      Amplifiers.Add(TAmplifierController.Create(Fprogram, StrToInt(PhaseSetting[i+1]), True));
+    begin
+      Amplifier := TBasicIntComputer.Create(Fprogram);
+      Amplifier.StopOnOutPut := True;
+      Amplifier.QueueInput(StrToInt(PhaseSetting[i+1]));
+      Amplifiers.Add(Amplifier);
+    end;
 
     InputSignal := 0;
     while not  Amplifiers[4].IsStopped do
     begin
       for i := 0 to 4 do
       begin
-        Amplifiers[i].SetPhaseSetting(InputSignal);
+        Amplifiers[i].QueueInput(InputSignal);
         InputSignal := Amplifiers[i].Run;
       end;
     end;
@@ -1390,23 +1393,16 @@ end;
 procedure TAdventOfCodeDay17.BeforeSolve;
 begin
   Map := TList<TPosition>.Create;
-  InputQueue := TQueue<Integer>.Create;
 end;
 
 procedure TAdventOfCodeDay17.AfterSolve;
 begin
   Map.Free;
-  InputQueue.Free;
-end;
-
-function TAdventOfCodeDay17.GiveInput: Integer;
-begin
-  Result := InputQueue.Dequeue;
 end;
 
 function TAdventOfCodeDay17.SolveA: Variant;
 
-  function _IsIntersections(aPosition: TPosition): Boolean;
+  function _IsIntersection(aPosition: TPosition): Boolean;
   begin
     Result := Map.ConTains(aPosition.Clone.ApplyDirection(Up))
           and Map.ConTains(aPosition.Clone.ApplyDirection(Down))
@@ -1447,7 +1443,7 @@ begin
 
   Result := 0;
   for Position in Map do
-    if _IsIntersections(Position) then
+    if _IsIntersection(Position) then
       Inc(Result, Position.x * Position.Y);
 
   Computer.Free;
@@ -1475,12 +1471,11 @@ var Position, RobotPosistion: TPosition;
   var i: Integer;
   begin
     for i := 1 to Length(Instruction) do
-      InputQueue.Enqueue(Ord(Instruction[i]));
-    InputQueue.Enqueue(10); //Final linefeed
+      Computer.QueueInput(Ord(Instruction[i]));
+    Computer.QueueInput(10); //Final linefeed
   end;
 
 Var FunctionA, FunctionB, FunctionC, MainProgram: String;
-
 begin
   Instruction := '';
   Direction := Up;
@@ -1533,7 +1528,6 @@ begin
   FunctionC := 'R,12,L,10,L,6,R,10';
 
   Computer := TBasicIntComputer.Create(FInput[0]);
-  Computer.OnNeedInput := GiveInput;
   Computer.WriteMemory(0, 2);
 
   _FeedInstruction(MainProgram);
@@ -1733,13 +1727,11 @@ end;
 {$REGION 'TAdventOfCodeDay19'}
 procedure TAdventOfCodeDay19.BeforeSolve;
 begin
-  InputQueue := TQueue<Integer>.Create;
   Fprogram := TBasicIntComputer.ParseIntput(FInput[0]);
 end;
 
 procedure TAdventOfCodeDay19.AfterSolve;
 begin
-  InputQueue.Free;
   Fprogram.Free;
 end;
 
@@ -1748,17 +1740,10 @@ var Computer: TBasicIntComputer;
 begin
   Computer := TBasicIntComputer.Create(Fprogram);
   Computer.StopOnOutPut := True;
-  Computer.OnNeedInput := GiveInput;
-  InputQueue.Clear;
-  InputQueue.Enqueue(aX);
-  InputQueue.Enqueue(aY);
+  Computer.QueueInput(aX);
+  Computer.QueueInput(aY);
   Result := Computer.Run = 1;
   Computer.Free;
-end;
-
-function TAdventOfCodeDay19.GiveInput: Integer;
-begin
-  Result := InputQueue.Dequeue;
 end;
 
 function TAdventOfCodeDay19.SolveA: Variant;

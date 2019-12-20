@@ -16,7 +16,7 @@ public
   Class procedure RunTests;
 end;
 
-Const AOCTestData: array[0..18] of AOCTest =
+Const AOCTestData: array[0..19] of AOCTest =
 (
  (AOCClass: TAdventOfCodeDay1; ExpectedSolutionA: '3270717'; ExpectedSolutionB: '4903193'),
  (AOCClass: TAdventOfCodeDay2; ExpectedSolutionA: '3085697'; ExpectedSolutionB: '9425'),
@@ -36,7 +36,8 @@ Const AOCTestData: array[0..18] of AOCTest =
  (AOCClass: TAdventOfCodeDay16; ExpectedSolutionA: '52486276'; ExpectedSolutionB: '53553731'; OverRidenTestInput: '03081770884921959731165446850517'),
  (AOCClass: TAdventOfCodeDay17; ExpectedSolutionA: '5948'; ExpectedSolutionB: '997790'),
  (AOCClass: TAdventOfCodeDay18; ExpectedSolutionA: '3856'; ExpectedSolutionB: '1660'),
- (AOCClass: TAdventOfCodeDay19; ExpectedSolutionA: '162'; ExpectedSolutionB: '13021056')
+ (AOCClass: TAdventOfCodeDay19; ExpectedSolutionA: '162'; ExpectedSolutionB: '13021056'),
+ (AOCClass: TAdventOfCodeDay20; ExpectedSolutionA: '620'; ExpectedSolutionB: '7366')
  );
 
 implementation

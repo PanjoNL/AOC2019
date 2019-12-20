@@ -18,6 +18,7 @@ end;
 type TExploreData = record
   Position: TPosition;
   StepsTaken: Integer;
+  Level: Integer;
   CollectedKeys: string;
   function SetPosition(Pos: TPosition): TExploreData;
 end;
@@ -207,6 +208,21 @@ type TAdventOfCodeDay19 = class(TAdventOfCode)
     Fprogram: TDictionary<Integer, int64>;
     function GiveInput: Integer;
     function IsTractorBeam(Const aX, aY: Integer): Boolean;
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
+end;
+
+type TAdventOfCodeDay20 = class(TAdventOfCode)
+  private
+    Map: TDictionary<TPosition, Char>;
+    Portals: TDictionary<TPosition, String>;
+    MaxX, MaxY: Integer;
+    StartPortal, FinalPortal: TPosition;
+    function GetPortal(const PortalCode: string; Const CurrentPortal: TPosition): TPosition;
+    function SolveDonutMaze(Const UseRecursiveSpaces: boolean): Integer;
   protected
     function SolveA: Variant; override;
     function SolveB: Variant; override;
@@ -1778,12 +1794,165 @@ begin
   end;
 end;
 {$ENDREGION}
+{$REGION 'TAdventOfCodeDay20'}
+procedure TAdventOfCodeDay20.BeforeSolve;
+
+  procedure _BuidPortalList;
+  var TempPosition: TPosition;
+      Char1, Char2: Char;
+  begin
+    for TempPosition in Map.Keys do
+    begin
+      Char1 := Map[TempPosition];
+
+      if Char1 = '.' then
+        Continue;
+
+      if Map.TryGetValue(TempPosition.Clone.AddDelta(0, 1), Char2) then //Search down
+        if Char2 <> '.' then //its the other char of the portal code
+          if Map.ContainsKey(TempPosition.Clone.AddDelta(0, 2)) then
+            Portals.Add(TempPosition.Clone.AddDelta(0, 2), Char1+Char2)
+          else
+            Portals.Add(TempPosition.Clone.AddDelta(0, -1), Char1+Char2);
+
+      if Map.TryGetValue(TempPosition.Clone.AddDelta(1, 0), Char2) then  //Search left
+        if Char2 <> '.' then
+          if Map.ContainsKey(TempPosition.Clone.AddDelta(2, 0)) then
+            Portals.Add(TempPosition.Clone.AddDelta(2, 0), Char1+Char2)
+          else
+            Portals.Add(TempPosition.Clone.AddDelta(-1, 0), Char1+Char2);
+    end;
+  end;
+
+var x, y: Integer;
+    Position: TPosition;
+    TempChar: Char;
+begin
+  Map := TDictionary<TPosition, Char>.Create;
+  for y := 0 to FInput.Count-1 do
+    for x := 1 to Length(FInput[y]) do
+    begin
+      Position.SetIt(x-1, y);
+      TempChar := FInput[y][x];
+
+      if (TempChar = '#') or (TempChar = ' ') then  //Don't add walls or empty spaces
+        Continue;
+
+      Map.Add(Position, TempChar);
+    end;
+
+  Portals := TDictionary<TPosition, String>.Create;
+  _BuidPortalList;
+
+  Position.SetIt(-1, -1); //Dummy
+  StartPortal := GetPortal('AA', Position);
+  FinalPortal := GetPortal('ZZ', Position);
+
+  Portals.Remove(StartPortal);
+  Portals.Remove(FinalPortal);
+
+  MaxY := FInput.Count-1;
+  MaxX := Length(FInput[0]);
+end;
+
+procedure TAdventOfCodeDay20.AfterSolve;
+begin
+  Map.Free;
+  Portals.Free;
+end;
+
+function TAdventOfCodeDay20.GetPortal(const PortalCode: string; Const CurrentPortal: TPosition): TPosition;
+var TempPosition: TPosition;
+begin
+  for TempPosition in Portals.Keys do
+  begin
+    if Portals[TempPosition] = PortalCode then
+      if not TempPosition.Equals(CurrentPortal) then
+      begin
+        Result := TempPosition;
+        Exit;
+      end;
+  end;
+end;
+
+function TAdventOfCodeDay20.SolveDonutMaze(Const UseRecursiveSpaces: boolean): Integer;
+var ExplorationQueue: TQueue<TExploreData>;
+    SeenStates: TDictionary<String, Boolean>;
+    Explore: TExploreData;
+    TempPosition: TPosition;
+    StateKey, PortalKey: string;
+    IsOuterWall: Boolean;
+begin
+  Result := MaxInt;
+  ExplorationQueue := TQueue<TExploreData>.Create;
+  SeenStates := TDictionary<String, Boolean>.Create;
+  try
+    Explore.Position := StartPortal;
+    Explore.Level := 0;
+    Explore.StepsTaken := 0;
+    ExplorationQueue.Enqueue(Explore);
+
+    while ExplorationQueue.Count > 0 do
+    begin
+      Explore := ExplorationQueue.Dequeue;
+
+      StateKey := Format('%d#%d#%d', [Explore.Position.X, Explore.Position.Y, Explore.Level]);
+      if SeenStates.ContainsKey(StateKey) OR Not Map.ContainsKey(Explore.Position) then //State already seen or not on map
+        Continue;
+
+      SeenStates.Add(StateKey, True);
+
+      if Explore.Position.Equals(FinalPortal) and (not UseRecursiveSpaces or (Explore.Level = 0)) then
+        Exit(Explore.StepsTaken);//Found solution
+
+      if Portals.TryGetValue(Explore.Position, PortalKey)  then
+      begin
+        IsOuterWall := ((Explore.Position.x < 4) or (Explore.Position.x >  MaxX -4)) or
+                       ((Explore.Position.y < 4) or (Explore.Position.y >  MaxY -4));
+
+        if ((Explore.Level = 0) and UseRecursiveSpaces) and IsOuterWall then
+//        Do nothing
+        else
+        begin
+          Explore.Position := GetPortal(PortalKey, Explore.Position);
+          Inc(Explore.StepsTaken);
+          if IsOuterWall then
+            Dec(Explore.Level)
+          else
+            Inc(Explore.Level);
+        end;
+      end;
+
+      Inc(Explore.StepsTaken);
+      TempPosition := Explore.Position;
+      ExplorationQueue.Enqueue(Explore.SetPosition(TempPosition.Clone.ApplyDirection(Up)));
+      ExplorationQueue.Enqueue(Explore.SetPosition(TempPosition.Clone.ApplyDirection(Down)));
+      ExplorationQueue.Enqueue(Explore.SetPosition(TempPosition.Clone.ApplyDirection(Left)));
+      ExplorationQueue.Enqueue(Explore.SetPosition(TempPosition.Clone.ApplyDirection(Right)));
+    end;
+  finally
+    SeenStates.Free;
+    ExplorationQueue.Free;
+  end;
+end;
+
+function TAdventOfCodeDay20.SolveA: Variant;
+begin
+ Result := SolveDonutMaze(False); //620
+end;
+
+function TAdventOfCodeDay20.SolveB: Variant;
+begin
+  Result := SolveDonutMaze(True); //7366
+end;
+{$ENDREGION}
+
 
 initialization
   RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
     TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10, TAdventOfCodeDay11,
     TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14, TAdventOfCodeDay15, TAdventOfCodeDay16, TAdventOfCodeDay17,
-    TAdventOfCodeDay18, TAdventOfCodeDay19
+    TAdventOfCodeDay18, TAdventOfCodeDay19, TAdventOfCodeDay20
 ]);
 
 end.

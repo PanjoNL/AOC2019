@@ -226,6 +226,14 @@ type TAdventOfCodeDay20 = class(TAdventOfCode)
     procedure AfterSolve; override;
 end;
 
+type TAdventOfCodeDay21 = class(TAdventOfCode)
+  private
+    procedure RunProgram(aComputer: TBasicIntComputer);
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+end;
+
 implementation
 
 {$Region 'TAdventOfCodeDay1'}
@@ -1355,6 +1363,9 @@ begin
   Result := '';
   for i := 0 to 7 do
     Result := Result + IntToStr(Input[i]); //42945143
+
+  Input.Free;
+  NewInput.Free;;
 end;
 
 function TAdventOfCodeDay16.SolveB: Variant;
@@ -1467,14 +1478,6 @@ var Position, RobotPosistion: TPosition;
       Result := Count = 3; //One of the 4 legs is already removed, so when there are 3 left its a Intersection
   end;
 
-  procedure _FeedInstruction(Const Instruction: String);
-  var i: Integer;
-  begin
-    for i := 1 to Length(Instruction) do
-      Computer.QueueInput(Ord(Instruction[i]));
-    Computer.QueueInput(10); //Final linefeed
-  end;
-
 Var FunctionA, FunctionB, FunctionC, MainProgram: String;
 begin
   Instruction := '';
@@ -1530,11 +1533,11 @@ begin
   Computer := TBasicIntComputer.Create(FInput[0]);
   Computer.WriteMemory(0, 2);
 
-  _FeedInstruction(MainProgram);
-  _FeedInstruction(FunctionA);
-  _FeedInstruction(FunctionB);
-  _FeedInstruction(FunctionC);
-  _FeedInstruction('n');
+  Computer.QueueASCIICode(MainProgram);
+  Computer.QueueASCIICode(FunctionA);
+  Computer.QueueASCIICode(FunctionB);
+  Computer.QueueASCIICode(FunctionC);
+  Computer.QueueASCIICode('n');
 
   Result  := Computer.Run;
   Computer.Free;
@@ -1931,13 +1934,73 @@ begin
   Result := SolveDonutMaze(True); //7366
 end;
 {$ENDREGION}
+{$REGION 'TAdventOfCodeDay21'}
+procedure TAdventOfCodeDay21.RunProgram(aComputer: TBasicIntComputer);
+const Debug: Boolean = False; //Set to true to visualize the output of the computer
+var OutPut: Integer;
+    Line: string;
+begin
+  if Not Debug then
+    aComputer.Run; //Just run the program;
+
+  aComputer.StopOnOutPut := True;
+  while not aComputer.IsStopped do
+  begin
+    Output := aComputer.Run;
+    if Output = 10 then //NewLine
+    begin
+      WriteLn(Line);
+      Line := '';
+    end
+    else
+      Line := Line + char(Output);
+  end;
+end;
+
+function TAdventOfCodeDay21.SolveA: Variant;
+var Computer: TBasicIntComputer;
+begin
+  Computer := TBasicIntComputer.Create(FInput[0]);
+
+  Computer.QueueASCIICode('OR A J'); // Set Jump to True is A is a groud
+  Computer.QueueASCIICode('AND B J'); //Set Jump to True is B is a groud
+  Computer.QueueASCIICode('AND C J'); //Set Jump to True is C is a groud
+  Computer.QueueASCIICode('NOT J J'); //Inverse jump, command, if its false it means there is a hole ahead
+  Computer.QueueASCIICode('AND D J'); //Check if the landingzone is safe, if not, don't jump
+  Computer.QueueASCIICode('WALK');    //And walk
+
+  RunProgram(Computer);
+  Result := Computer.LastOutput; //19347868
+  Computer.Free;
+end;
+
+function TAdventOfCodeDay21.SolveB: Variant;
+var Computer: TBasicIntComputer;
+begin
+  Computer := TBasicIntComputer.Create(FInput[0]);
+
+  Computer.QueueASCIICode('OR A J');  //Set Jump to True is A is a groud
+  Computer.QueueASCIICode('AND B J'); //Set Jump to True is B is a groud
+  Computer.QueueASCIICode('AND C J'); //Set Jump to True is C is a groud
+  Computer.QueueASCIICode('NOT J J'); //Inverse jump, command, if its false it means there is a hole ahead
+  Computer.QueueASCIICode('AND D J'); //Check if the landingzone is safe, if not, don't jump
+  Computer.QueueASCIICode('OR E T');  //Check if there is ground one spot ahead of the landingzone, since we cant jump in the landingzone of a previous jump
+  Computer.QueueASCIICode('OR H T');  //check if we can jump from position E and land safe
+  Computer.QueueASCIICode('AND T J');  //Combine both cases
+  Computer.QueueASCIICode('RUN'); //And run
+
+  RunProgram(Computer);
+  Result := Computer.LastOutput; //1142479667
+  Computer.Free;
+end;
+{$ENDREGION}
 
 
 initialization
   RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
     TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10, TAdventOfCodeDay11,
     TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14, TAdventOfCodeDay15, TAdventOfCodeDay16, TAdventOfCodeDay17,
-    TAdventOfCodeDay18, TAdventOfCodeDay19, TAdventOfCodeDay20
+    TAdventOfCodeDay18, TAdventOfCodeDay19, TAdventOfCodeDay20, TAdventOfCodeDay21
 ]);
 
 end.

@@ -52,6 +52,7 @@ public
   function GetMemory(Const MemoryIndex: Integer): int64;
   procedure WriteMemory(const MemoryIndex, ValueToWrite: int64);
   procedure QueueInput(const Input: Integer);
+  procedure QueueASCIICode(Const Input: String);
   class function ParseIntput(const aProgram: String): TDictionary<Integer, int64>;
   class function RunProgram(const aProgram: string; aStartInput: Integer): Int64;
 end;
@@ -173,6 +174,14 @@ end;
 procedure TBasicIntComputer.QueueInput(const Input: Integer);
 begin
   InputQueue.Enqueue(Input);
+end;
+
+procedure TBasicIntComputer.QueueASCIICode(Const Input: String);
+var i: Integer;
+begin
+  for i := 1 to Length(Input) do
+    QueueInput(Ord(Input[i]));
+  QueueInput(10); //Final linefeed
 end;
 
 function TBasicIntComputer.GetMemory(Const MemoryIndex: Integer): int64;

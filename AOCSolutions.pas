@@ -234,6 +234,13 @@ type TAdventOfCodeDay21 = class(TAdventOfCode)
     function SolveB: Variant; override;
 end;
 
+type
+  TAdventOfCodeDay22 = class(TAdventOfCode)
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+  end;
+
 implementation
 
 {$Region 'TAdventOfCodeDay1'}
@@ -1994,13 +2001,145 @@ begin
   Computer.Free;
 end;
 {$ENDREGION}
+{$Region 'TAdventOfCodeDay22'}
+function TAdventOfCodeDay22.SolveA: Variant;
+Const StackSize: Integer = 10007;
+var CardsToCut: Integer;
+    Line: TStringList;
+    CurrentLine: String;
+begin
+  Line := TStringList.Create;
+  Line.Delimiter := ' ';
+  Result := 2019; //We only need to keep track of where card 2019 is ending up, so only calculate the position of this card
 
+  for CurrentLine in FInput do
+  begin
+    Line.DelimitedText := CurrentLine;
+
+    if CurrentLine.StartsWith('deal into new stack') then
+      Result := StackSize -1 - Result
+    else if CurrentLine.StartsWith('deal with increment') then
+      Result := StrToInt(Line[3])*Result mod StackSize
+    else if CurrentLine.StartsWith('cut') then
+    begin
+      CardsToCut := StrToInt(Line[1]);
+
+      if Result <= CardsToCut -1 then
+        Result := StackSize - CardsToCut + Result
+      else
+        Result := Result - CardsToCut;
+    end
+  end;
+  Line.Free; //6526
+end;
+
+function TAdventOfCodeDay22.SolveB: Variant;
+Const StackSize: int64 = 119315717514047;
+      ShuffleRounds: Int64 = 101741582076661;
+      TargetCardIndex: int64 = 2020;
+
+  //https://stackoverflow.com/questions/12168348/ways-to-do-modulo-multiplication-with-primitive-types
+  function RussianPeasantMultiplication(ValueA, ValueB, aMod: Int64): int64;
+  begin
+    Result := 0;
+    while ValueA <> 0 do
+    begin
+      if Odd(ValueA) then
+        result := (result + ValueB) mod aMod;
+      ValueA := ValueA shr 1;
+      ValueB := (ValueB shl 1) mod aMod;
+    end;
+  end;
+
+  //https://rosettacode.org/wiki/Modular_inverse
+  function modInv(e, t : int64) : int64;
+  var
+    d : int64;
+    bal, count, step : int64;
+  begin
+    d := 0;
+    if e < t then
+      begin
+        count := 1;
+        bal := e;
+        repeat
+          step := ((t-bal) DIV e)+1;
+          bal := bal + step * e;
+          count := count + step;
+          bal := bal - t;
+        until bal = 1;
+        d := count;
+      end;
+    modInv := d;
+  end;
+
+  function Modular(aBase, aExp, aMod: Int64): int64;
+  var i, power: Int64;
+  begin
+    Result := 1;
+    power := aBase mod aMod;
+    for i := 0 to SizeOf(int64)*8-1 do
+    begin
+      if Odd(aExp shr i) then
+        Result := RussianPeasantMultiplication(Result, power, aMod);
+      power := RussianPeasantMultiplication(power, Power, aMod);
+    end;
+  end;
+
+  procedure _Simplify(Var aValue: Int64);
+  begin
+    aValue := aValue mod StackSize;
+    if aValue < 0 then
+      Inc(aValue, StackSize);
+  end;
+
+var i: Integer;
+    Line: TStringList;
+    One, Two, Three, four, temp, a, b: Int64;
+begin
+  Line := TStringList.Create;
+  Line.Delimiter := ' ';
+
+  a := 1;
+  b := 0;
+  //Each itteration can be reversed with the formula (ax + b) mod m, first find a and b to undo one shuffle
+  for i := FInput.Count-1 downto 0 do
+  begin
+    Line.DelimitedText := FInput[i];
+
+    if FInput[i].StartsWith('deal into new stack') then
+    begin
+      b := -(b + 1);
+      a := -a;;
+    end
+    else if FInput[i].StartsWith('cut') then //cut N cards
+      Inc(b, StrToInt64(Line[1]))
+    else if FInput[i].StartsWith('deal with increment')then //deal with increment N
+    begin //https://en.wikibooks.org/wiki/Algorithm_Implementation/Mathematics/Extended_Euclidean_algorithm
+      temp := modInv(StrToInt64(Line[3]), StackSize);
+      a := RussianPeasantMultiplication(a, temp, stacksize);
+      b := RussianPeasantMultiplication(b, temp, stacksize);
+    end;
+
+    _Simplify(a);
+    _Simplify(b);
+  end;
+  Line.Free;
+
+  //https://en.wikipedia.org/wiki/Geometric_series
+  one := RussianPeasantMultiplication(Modular(a, ShuffleRounds, StackSize), TargetCardIndex, StackSize);
+  two := (Modular(a, ShuffleRounds, StackSize) + StackSize -1) mod StackSize;
+  Three := RussianPeasantMultiplication(b, Two, StackSize);
+  Four := Modular(a-1, StackSize-2, StackSize);
+  Result := (One + RussianPeasantMultiplication(Three, four, StackSize)) mod stacksize; //79855812422607
+end;
+{$ENDREGION}
 
 initialization
   RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
     TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10, TAdventOfCodeDay11,
     TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14, TAdventOfCodeDay15, TAdventOfCodeDay16, TAdventOfCodeDay17,
-    TAdventOfCodeDay18, TAdventOfCodeDay19, TAdventOfCodeDay20, TAdventOfCodeDay21
+    TAdventOfCodeDay18, TAdventOfCodeDay19, TAdventOfCodeDay20, TAdventOfCodeDay21, TAdventOfCodeDay22
 ]);
 
 end.

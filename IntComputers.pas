@@ -9,6 +9,7 @@ uses
   system.Math;
 
 type TParameterMode=(PositionMode, ImmediateMode, RelativeMode);
+type TOnNoInputValue = procedure(var Input: Int64; Var Stop: Boolean) of object;
 
 type IInstruction = interface
   function Opcode: Integer;
@@ -33,7 +34,7 @@ private
   RelativeBase: Integer;
   FInternalStop: Boolean;
   Fprogram: TDictionary<Integer, int64>;
-  InputQueue: TQueue<Integer>;
+  InputQueue: TQueue<int64>;
   function CanProcess: Boolean;
   function GetParam(Const aIndex: Integer; Const aInstruction: IInstruction): int64;
   procedure ProcessInstruction(const aInstruction: IInstruction);
@@ -43,6 +44,7 @@ private
 public
   LastOutput: int64;
   StopOnOutPut: Boolean;
+  OnNoInputValue: TOnNoInputValue;
   constructor Create(aProgram: TDictionary<Integer, int64>); overload;
   constructor Create(Const Input: String); overload;
   destructor Destroy; override;
@@ -51,7 +53,7 @@ public
   function IsStopped: Boolean;
   function GetMemory(Const MemoryIndex: Integer): int64;
   procedure WriteMemory(const MemoryIndex, ValueToWrite: int64);
-  procedure QueueInput(const Input: Integer);
+  procedure QueueInput(const Input: int64);
   procedure QueueASCIICode(Const Input: String);
   class function ParseIntput(const aProgram: String): TDictionary<Integer, int64>;
   class function RunProgram(const aProgram: string; aStartInput: Integer): Int64;
@@ -137,7 +139,7 @@ end;
 constructor TBasicIntComputer.Create(aProgram: TDictionary<Integer, int64>);
 begin
   FProgram := TDictionary<Integer, int64>.Create(aProgram);
-  InputQueue := TQueue<Integer>.Create;
+  InputQueue := TQueue<int64>.Create;
   MemPos := 0;
   RelativeBase := 0;
 end;
@@ -171,7 +173,7 @@ begin
   Fprogram.AddOrSetValue(MemoryIndex, ValueToWrite);
 end;
 
-procedure TBasicIntComputer.QueueInput(const Input: Integer);
+procedure TBasicIntComputer.QueueInput(const Input: int64);
 begin
   InputQueue.Enqueue(Input);
 end;
@@ -226,15 +228,21 @@ begin
 end;
 
 procedure TBasicIntComputer.ProcessInstruction(const aInstruction: IInstruction);
+var Temp: Int64;
 begin
   case aInstruction.Opcode of
     01: WriteMemoryAtOffset(3, GetParam(1, aInstruction) + GetParam(2, aInstruction), aInstruction);
     02: WriteMemoryAtOffset(3, GetParam(1, aInstruction) * GetParam(2, aInstruction), aInstruction);
     03: begin
           if InputQueue.Count > 0 then
-            WriteMemoryAtOffset(1, InputQueue.Dequeue, aInstruction)
+            Temp := InputQueue.Dequeue
           else
-            WriteMemoryAtOffset(1, LastOutput, aInstruction);
+          begin
+            Temp := LastOutput;
+            if Assigned(OnNoInputValue) then
+              OnNoInputValue(Temp, FInternalStop);
+          end;
+          WriteMemoryAtOffset(1, Temp, aInstruction);
         end;
     04: begin
           LastOutput := GetParam(1, aInstruction);

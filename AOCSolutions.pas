@@ -241,6 +241,19 @@ type
     function SolveB: Variant; override;
   end;
 
+type
+  TAdventOfCodeDay23 = class(TAdventOfCode)
+  private
+    Fprogram: TDictionary<Integer, int64>;
+    procedure HandleNoInputValue(var Input: Int64; Var Stop: Boolean);
+    function BuildAndRunIntCluster(Const ReturnFirstPackage: Boolean): Int64;
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+    procedure BeforeSolve; override;
+    procedure AfterSolve; override;
+  end;
+
 implementation
 
 {$Region 'TAdventOfCodeDay1'}
@@ -1178,7 +1191,7 @@ var Storage: TDictionary<String, Int64>;
         if Pair.Key <> 'ORE' then
           _CalcOreNeeded(Pair.Key, Batches*Pair.Value, OreNeeded)
         else
-         Inc(OreNeeded, Batches*Pair.Value);
+          Inc(OreNeeded, Batches*Pair.Value);
       end;
       Storage[ProductName] := Storage[ProductName] + Batches*Reaction.NumberOfProducts;
     end;
@@ -2134,12 +2147,115 @@ begin
   Result := (One + RussianPeasantMultiplication(Three, four, StackSize)) mod stacksize; //79855812422607
 end;
 {$ENDREGION}
+{$REGION 'TAdventOfCodeDay23'}
+procedure TAdventOfCodeDay23.HandleNoInputValue(var Input: Int64; Var Stop: Boolean);
+begin
+  Input := -1; 
+  Stop := True;
+end;
 
+function TAdventOfCodeDay23.BuildAndRunIntCluster(Const ReturnFirstPackage: Boolean): Int64;
+var IntCluster: TList<TBasicIntComputer>;
+    Computer: TBasicIntComputer;
+    x, y, DestinationAddress, NatX, NatY: int64;
+    IdleComputers, i: Integer;
+    SeenY: TList<Int64>;
+begin
+  IntCluster := TList<TBasicIntComputer>.Create;
+  SeenY := TList<Int64>.Create;
+
+  for i := 0 to 49 do
+  begin
+    Computer := TBasicIntComputer.Create(FProgram);
+    Computer.StopOnOutPut := True;
+    Computer.QueueInput(i);
+    Computer.OnNoInputValue := HandleNoInputValue;
+    Computer.Run;
+    IntCluster.Add(Computer);
+  end;
+
+  try
+    NatX := 0;
+    NatY := 0;
+
+    while true do
+    begin
+      IdleComputers := 0;
+
+      for Computer in IntCluster do
+      begin
+        Computer.LastOutput := -1;
+        DestinationAddress := Computer.Run;
+
+        if DestinationAddress < 0 then
+        begin
+          Inc(IdleComputers);
+          Continue;
+        end;
+
+        x := Computer.Run;
+        y := Computer.Run;
+
+        if DestinationAddress = 255 then
+        begin
+          NatX := x;
+          NatY := y;
+          if ReturnFirstPackage then
+            Exit(NatY);
+        end
+        else
+        begin
+          IntCluster[DestinationAddress].QueueInput(X);
+          IntCluster[DestinationAddress].QueueInput(y);
+        end;
+      end;
+
+      if IdleComputers = IntCluster.Count then
+      begin
+        if SeenY.Contains(NatY) then
+          Exit(NatY);
+
+        SeenY.Add(NatY);
+        IntCluster[0].QueueInput(NatX);
+        IntCluster[0].QueueInput(NatY);
+        NatX := 0;
+        NatY := 0;
+      end;
+    end;
+  finally
+    for Computer in IntCluster do
+      Computer.Free;
+
+    IntCluster.Free;
+    SeenY.Free;
+  end;
+end;
+
+procedure TAdventOfCodeDay23.BeforeSolve;
+begin
+  Fprogram := TBasicIntComputer.ParseIntput(FInput[0]);
+end;
+
+procedure TAdventOfCodeDay23.Aftersolve;
+begin
+  Fprogram.Free;
+end;
+
+function TAdventOfCodeDay23.SolveA: Variant;
+begin
+  Result := BuildAndRunIntCluster(True); //20367
+end;
+
+function TAdventOfCodeDay23.SolveB: Variant;
+begin
+  Result := BuildAndRunIntCluster(False); //15080
+end;
+{$ENDREGION}
 initialization
   RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
     TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10, TAdventOfCodeDay11,
     TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14, TAdventOfCodeDay15, TAdventOfCodeDay16, TAdventOfCodeDay17,
-    TAdventOfCodeDay18, TAdventOfCodeDay19, TAdventOfCodeDay20, TAdventOfCodeDay21, TAdventOfCodeDay22
+    TAdventOfCodeDay18, TAdventOfCodeDay19, TAdventOfCodeDay20, TAdventOfCodeDay21, TAdventOfCodeDay22, TAdventOfCodeDay23
 ]);
 
 end.

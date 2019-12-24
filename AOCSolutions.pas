@@ -2330,35 +2330,7 @@ var Grids: TAOCDictionary<Integer, TDictionary<TPosition, Boolean>>;
       RemoteMap: TDictionary<TPosition, Boolean>;
       TempPos: TPosition;
 
-    Function _CountRemoteX(Valy: integer): integer;
-    var i: Integer;
-        pos: TPosition;
-    begin
-      Result := 0;
-      for i := 0 to 4 do
-      begin
-        pos.SetIt(i, valY);
-        if RemoteMap[pos] then
-          Inc(Result);
-
-      end;
-    end;
-
-    Function _CountRemoteY(Valx: integer): integer;
-    var i: Integer;
-        pos: TPosition;
-    begin
-      Result := 0;
-      for i := 0 to 4 do
-      begin
-        pos.SetIt(ValX, i);
-        if RemoteMap[pos] then
-          Inc(Result);
-
-      end;
-    end;
-
-    Function _CountRemoteRow(const aStartX, aDeltaX, aStartY, aDeltaY: integer): integer;
+    function _CountRemoteRow(const aStartX, aDeltaX, aStartY, aDeltaY: integer): integer;
     var i: Integer;
         pos: TPosition;
     begin
@@ -2368,12 +2340,10 @@ var Grids: TAOCDictionary<Integer, TDictionary<TPosition, Boolean>>;
           Inc(Result);
     end;
 
-
-
   begin
       Result := 0;
 
-      //This map
+      //This Grid
       if Grids[aLevel].TryGetValue(aPosition.Clone.ApplyDirection(Up), Temp) and Temp then inc(Result);
       if Grids[aLevel].TryGetValue(aPosition.Clone.ApplyDirection(Down), Temp) and Temp then inc(Result);
       if Grids[aLevel].TryGetValue(aPosition.Clone.ApplyDirection(Left), Temp) and Temp then inc(Result);
@@ -2480,7 +2450,6 @@ begin
   if Action = cnRemoved then
     Item.Free;
 end;
-
 {$ENDREGION}
 
 initialization

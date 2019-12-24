@@ -28,13 +28,15 @@ end;
 type TAOCDictionary<TKey,TValue> = class(TDictionary<TKey,TValue>)
   public
     procedure AddOrIgnoreValue(const Key: TKey; const Value: TValue);
+    constructor Create(const aOnValueNoify: TCollectionNotifyEvent<TValue>); overload;
+    procedure Free; overload;
 end;
 
 type
   TPosition = record
     x: integer;
     y: Integer;
-    procedure SetIt(const aX, aY: integer);
+    function SetIt(const aX, aY: integer): TPosition;
     function AddDelta(const aX, aY: Integer): TPosition;
     function Equals(Const Other: TPosition): Boolean;
     function Clone: TPosition;
@@ -138,10 +140,23 @@ begin
     Self.Add(Key, Value);
 end;
 
-procedure TPosition.SetIt(const aX: Integer; const aY: Integer);
+constructor TAOCDictionary<TKey,TValue>.Create(const aOnValueNoify: TCollectionNotifyEvent<TValue>);
+begin
+  inherited Create;
+  OnValueNotify := aOnValueNoify;
+end;
+
+procedure TAOCDictionary<TKey,TValue>.Free;
+begin
+  Self.Clear;
+  inherited Free;
+end;
+
+function TPosition.SetIt(const aX: Integer; const aY: Integer): TPosition;
 begin
   x := aX;
   y := aY;
+  Result := Self;
 end;
 
 function TPosition.AddDelta(const aX, aY: Integer): TPosition;

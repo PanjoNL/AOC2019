@@ -254,6 +254,14 @@ type
     procedure AfterSolve; override;
   end;
 
+type TAdventOfCodeDay24 = class(TAdventOfCode)
+  private
+    procedure GridNotify(Sender: TObject; const Item: TDictionary<TPosition, Boolean>; Action: TCollectionNotification);
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+end;
+
 implementation
 
 {$Region 'TAdventOfCodeDay1'}
@@ -2150,7 +2158,7 @@ end;
 {$REGION 'TAdventOfCodeDay23'}
 procedure TAdventOfCodeDay23.HandleNoInputValue(var Input: Int64; Var Stop: Boolean);
 begin
-  Input := -1; 
+  Input := -1;
   Stop := True;
 end;
 
@@ -2251,11 +2259,236 @@ begin
   Result := BuildAndRunIntCluster(False); //15080
 end;
 {$ENDREGION}
+{$REGION 'TAdventOfCodeDay24'}
+function TAdventOfCodeDay24.SolveA: Variant;
+var Grid: TDictionary<TPosition, Boolean>;
+
+  function _CountBugs(aPosition: TPosition): Integer;
+  var Temp: Boolean;
+  begin
+    Result := 0;
+    if Grid.TryGetValue(aPosition.Clone.ApplyDirection(Up), Temp) and Temp then inc(Result);
+    if Grid.TryGetValue(aPosition.Clone.ApplyDirection(Down), Temp) and Temp then inc(Result);
+    if Grid.TryGetValue(aPosition.Clone.ApplyDirection(Left), Temp) and Temp then inc(Result);
+    if Grid.TryGetValue(aPosition.Clone.ApplyDirection(Right), Temp) and Temp then inc(Result);
+  end;
+
+var NewGrid: TDictionary<TPosition, Boolean>;
+    Position: TPosition;
+    x, y, BugCount, BioDiversityRating: Integer;
+    Infested: Boolean;
+    SeenBioDiversityRatings: TList<Integer>;
+begin
+  Grid := TDictionary<TPosition, Boolean>.Create;
+  SeenBioDiversityRatings := TList<Integer>.Create;
+
+  try
+    for y := 0 to FInput.Count -1 do
+      for x := 1 to Length(FInput[y]) do
+        Grid.Add(Position.SetIt(x-1, y), FInput[y][x] = '#');
+
+    while true do
+    begin
+      BioDiversityRating := 0;
+      NewGrid := TDictionary<TPosition, Boolean>.Create;
+      for Position in Grid.Keys do
+      begin
+        BugCount := _CountBugs(Position);
+        Infested := Grid[Position];
+
+        if Infested then
+          BioDiversityRating := BioDiversityRating + Round(Power(2, Position.y*5 + Position.x));
+
+        if Infested and (BugCount <> 1) then
+          Infested := False
+        else if (Not Infested) and (BugCount in [1,2]) then
+          Infested := True;
+
+        NewGrid.Add(Position, Infested);
+      end;
+
+      Grid.Free;
+      Grid := TDictionary<TPosition, Boolean>.Create(NewGrid);
+      NewGrid.Free;
+
+      if SeenBioDiversityRatings.Contains(BioDiversityRating) then
+        Exit(BioDiversityRating); //32511025
+      SeenBioDiversityRatings.Add(BioDiversityRating);
+    end;
+  finally
+    Grid.Free;
+    SeenBioDiversityRatings.Free;
+  end;
+end;
+
+function TAdventOfCodeDay24.SolveB: Variant;
+var Grids: TAOCDictionary<Integer, TDictionary<TPosition, Boolean>>;
+    EmptyGrid: TDictionary<TPosition, Boolean>;
+
+  function _CountBugs(aPosition: TPosition; alevel: integer): Integer;
+  var Temp: Boolean;
+      RemoteMap: TDictionary<TPosition, Boolean>;
+      TempPos: TPosition;
+
+    Function _CountRemoteX(Valy: integer): integer;
+    var i: Integer;
+        pos: TPosition;
+    begin
+      Result := 0;
+      for i := 0 to 4 do
+      begin
+        pos.SetIt(i, valY);
+        if RemoteMap[pos] then
+          Inc(Result);
+
+      end;
+    end;
+
+    Function _CountRemoteY(Valx: integer): integer;
+    var i: Integer;
+        pos: TPosition;
+    begin
+      Result := 0;
+      for i := 0 to 4 do
+      begin
+        pos.SetIt(ValX, i);
+        if RemoteMap[pos] then
+          Inc(Result);
+
+      end;
+    end;
+
+    Function _CountRemoteRow(const aStartX, aDeltaX, aStartY, aDeltaY: integer): integer;
+    var i: Integer;
+        pos: TPosition;
+    begin
+      Result := 0;
+      for i := 0 to 4 do
+        if RemoteMap[pos.SetIt(aStartX, aStartY).AddDelta(aDeltaX*i, aDeltaY*i)] then
+          Inc(Result);
+    end;
+
+
+
+  begin
+      Result := 0;
+
+      //This map
+      if Grids[aLevel].TryGetValue(aPosition.Clone.ApplyDirection(Up), Temp) and Temp then inc(Result);
+      if Grids[aLevel].TryGetValue(aPosition.Clone.ApplyDirection(Down), Temp) and Temp then inc(Result);
+      if Grids[aLevel].TryGetValue(aPosition.Clone.ApplyDirection(Left), Temp) and Temp then inc(Result);
+      if Grids[aLevel].TryGetValue(aPosition.Clone.ApplyDirection(Right), Temp) and Temp then inc(Result);
+
+      //Level down
+      if not Grids.TryGetValue(alevel - 1, RemoteMap) then
+        RemoteMap := EmptyGrid;
+
+      if (aPosition.x = 0) and RemoteMap[TempPos.SetIt(2,1)] then Inc(Result);
+      if (aPosition.x = 4) and RemoteMap[TempPos.SetIt(2,3)] then Inc(Result);
+      if (aPosition.y = 0) and RemoteMap[TempPos.SetIt(1,2)] then Inc(Result);
+      if (aPosition.y = 4) and RemoteMap[TempPos.SetIt(3,2)] Then Inc(Result);
+
+      //Level up;
+      if not Grids.TryGetValue(alevel + 1, RemoteMap) then
+        RemoteMap := EmptyGrid;
+
+      if (aPosition.x = 2) and (aPosition.y=1) then //Case 8
+        Inc(Result, _CountRemoteRow(0, 0, 0, 1));
+
+      if (aPosition.x = 2) and (aPosition.y=3) then //Case 18
+        Inc(Result, _CountRemoteRow(4, 0, 0, 1));
+
+      if (aPosition.x = 1) and (aPosition.y=2) then //Case 12
+        Inc(Result, _CountRemoteRow(0, 1, 0, 0));
+
+      if (aPosition.x = 3) and (aPosition.y=2) then //Case 14
+        Inc(Result, _CountRemoteRow(0, 1, 4, 0));
+  end;
+
+var NewGrids: TAOCDictionary<Integer, TDictionary<TPosition, Boolean>>;
+    Grid, NewGrid: TDictionary<TPosition, Boolean>;
+    Position: TPosition;
+    x, y, Level, BugCount :Integer;
+    Infested: Boolean;
+begin
+  Grids := TAOCDictionary<Integer, TDictionary<TPosition, Boolean>>.Create(GridNotify);
+
+  //Load initial grid
+  Grid := TDictionary<TPosition, Boolean>.Create;
+  EmptyGrid := TDictionary<TPosition, Boolean>.Create;
+  for y := 0 to 4 do
+    for x := 0 to 4 do
+    begin
+      if (x=2) and (y=2)  then
+        Continue;
+
+      Position.SetIt(x, y);
+      Grid.Add(Position, FInput[y][x+1] = '#');
+      EmptyGrid.Add(Position, False);
+    end;
+  Grids.Add(0, Grid);
+
+  //Add extra grids
+  for Level := 1 to 100 do
+  begin
+    Grids.Add(Level, TDictionary<TPosition, Boolean>.Create(EmptyGrid));
+    Grids.Add(-Level, TDictionary<TPosition, Boolean>.Create(EmptyGrid));
+  end;
+
+  for x := 0 to 199 do
+  begin
+    NewGrids := TAOCDictionary<Integer, TDictionary<TPosition, Boolean>>.Create(GridNotify);
+    for Level in Grids.keys do
+    begin
+      NewGrid := TDictionary<TPosition, Boolean>.Create;
+
+      for Position in Grids[Level].Keys do
+      begin
+        BugCount := _CountBugs(Position, Level);
+        Infested := Grids[Level][Position];
+
+        if Infested and (BugCount <> 1) then
+          Infested := False
+        else if (Not Infested) and (BugCount in [1,2]) then
+          Infested := True;
+        NewGrid.Add(Position, Infested);
+      end;
+
+      NewGrids.Add(Level, NewGrid); //Adding the newgrid to the dictionary ensures its cleand up once the Newgrids is freeed
+    end;
+
+    Grids.Free;
+    Grids := TAOCDictionary<Integer, TDictionary<TPosition, Boolean>>.Create(GridNotify);
+    for Level in NewGrids.Keys do
+      Grids.Add(Level, TDictionary<TPosition, Boolean>.Create(NewGrids[Level]));
+
+    NewGrids.Free;
+  end;
+
+  Result := 0;
+  for Grid in Grids.Values do
+    for Infested in Grid.Values do
+      if Infested then
+        Inc(Result);
+
+  Grids.Free;
+  EmptyGrid.Free;
+end;
+
+procedure TAdventOfCodeDay24.GridNotify(Sender: TObject; const Item: TDictionary<TPosition, Boolean>; Action: TCollectionNotification);
+begin
+  if Action = cnRemoved then
+    Item.Free;
+end;
+
+{$ENDREGION}
+
 initialization
   RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
     TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10, TAdventOfCodeDay11,
     TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14, TAdventOfCodeDay15, TAdventOfCodeDay16, TAdventOfCodeDay17,
-    TAdventOfCodeDay18, TAdventOfCodeDay19, TAdventOfCodeDay20, TAdventOfCodeDay21, TAdventOfCodeDay22, TAdventOfCodeDay23
+    TAdventOfCodeDay18, TAdventOfCodeDay19, TAdventOfCodeDay20, TAdventOfCodeDay21, TAdventOfCodeDay22, TAdventOfCodeDay23,
+    TAdventOfCodeDay24
 ]);
 
 end.

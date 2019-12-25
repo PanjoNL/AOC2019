@@ -7,7 +7,8 @@ uses
   AOCSolutions in 'AOCSolutions.pas' {$R *.res},
   uAOCUtils in 'uAOCUtils.pas',
   IntComputers in 'IntComputers.pas',
-  uAOCTests in 'uAOCTests.pas';
+  uAOCTests in 'uAOCTests.pas',
+  uCryostasis in 'uCryostasis.pas' {Cryostasis};
 
 begin
   Application.Initialize;

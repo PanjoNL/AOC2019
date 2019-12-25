@@ -45,6 +45,7 @@ public
   LastOutput: int64;
   StopOnOutPut: Boolean;
   OnNoInputValue: TOnNoInputValue;
+
   constructor Create(aProgram: TDictionary<Integer, int64>); overload;
   constructor Create(Const Input: String); overload;
   destructor Destroy; override;
@@ -52,6 +53,7 @@ public
   function Run: int64;
   function IsStopped: Boolean;
   function GetMemory(Const MemoryIndex: Integer): int64;
+  function InstructionQueueCount: Integer;
   procedure WriteMemory(const MemoryIndex, ValueToWrite: int64);
   procedure QueueInput(const Input: int64);
   procedure QueueASCIICode(Const Input: String);
@@ -190,6 +192,11 @@ function TBasicIntComputer.GetMemory(Const MemoryIndex: Integer): int64;
 begin
   if not Fprogram.TryGetValue(MemoryIndex, Result) then
     Result := 0;
+end;
+
+function TBasicIntComputer.InstructionQueueCount: Integer;
+begin
+  Result := InputQueue.Count;
 end;
 
 function TBasicIntComputer.CanProcess: Boolean;

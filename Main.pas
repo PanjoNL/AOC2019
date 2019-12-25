@@ -5,16 +5,18 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, AOCBase, AOCSolutions, Vcl.ExtCtrls,
-  System.Generics.Collections, uAOCUtils, uAOCTests;
+  System.Generics.Collections, uAOCUtils, uAOCTests, uCryostasis;
 
 type
   TForm1 = class(TForm)
     btnSolve: TButton;
     cbb1: TComboBox;
     btnTest: TButton;
+    btnCryostasis: TButton;
     procedure FormCreate(Sender: TObject);
     procedure btnSolveClick(Sender: TObject);
     procedure btnTestClick(Sender: TObject);
+    procedure btnCryostasisClick(Sender: TObject);
   end;
 
 var
@@ -40,9 +42,18 @@ begin
   end;
   cbb1.ItemIndex := cbb1.Items.Count - 1;
 
-  btnSolveClick(nil);
-  Application.Terminate;
+//  btnSolveClick(nil);
+//  Application.Terminate;
   ReportMemoryLeaksOnShutdown := True;
+end;
+
+procedure TForm1.btnCryostasisClick(Sender: TObject);
+begin
+  With TCryostasis.Create(Self) do
+  begin
+    ShowModal;
+    Free;
+  end;
 end;
 
 procedure TForm1.btnSolveClick(Sender: TObject);

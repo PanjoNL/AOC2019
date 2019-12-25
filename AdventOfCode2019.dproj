@@ -90,6 +90,9 @@
         <DCCReference Include="uAOCUtils.pas"/>
         <DCCReference Include="IntComputers.pas"/>
         <DCCReference Include="uAOCTests.pas"/>
+        <DCCReference Include="uCryostasis.pas">
+            <Form>Cryostasis</Form>
+        </DCCReference>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

@@ -262,6 +262,13 @@ type TAdventOfCodeDay24 = class(TAdventOfCode)
     function SolveB: Variant; override;
 end;
 
+type
+  TAdventOfCodeDay25 = class(TAdventOfCode)
+  protected
+    function SolveA: Variant; override;
+    function SolveB: Variant; override;
+  end;
+
 implementation
 
 {$Region 'TAdventOfCodeDay1'}
@@ -2451,14 +2458,67 @@ begin
     Item.Free;
 end;
 {$ENDREGION}
+{$REGION 'TAdventOfCodeDay25'}
+function TAdventOfCodeDay25.SolveA: Variant;
+var Computer: TBasicIntComputer;
+    InputQueue: TQueue<string>;
+    Output, i: Integer;
+    Line: string;
+    Lines: TStringList;
+    OutputMessages: TStack<String>;
+begin
+  InputQueue := TQueue<string>.Create;
+  Lines := TStringList.Create;
+  OutputMessages := TStack<String>.Create;;
+  Computer := TBasicIntComputer.Create(FInput[0]);
+  Computer.StopOnOutPut := True;
 
+  try
+    Lines.LoadFromFile(SaveFilePath);
+    for i := 0 to Lines.Count-1 do
+      InputQueue.Enqueue(Lines[i]);
+
+    Line := '';
+    while not Computer.IsStopped do
+    begin
+      if (Computer.InstructionQueueCount = 0) and (InputQueue.Count > 0) then
+        Computer.QueueASCIICode(InputQueue.Dequeue);
+
+      Output := Computer.Run;
+      if Output = 10 then
+      begin
+        OutputMessages.Push(Line);
+        Line := '';
+      end
+      else
+        Line := Line + Char(Output);
+    end;
+
+    while True do
+    begin
+      Result := OutputMessages.Pop;
+      if Result <> '' then
+        Exit;
+    end;
+  finally
+    Lines.Free;
+    OutputMessages.Free;
+    Computer.Free;
+    InputQueue.Free;
+  end;
+end;
+
+function TAdventOfCodeDay25.SolveB: Variant;
+begin
+  Result := 'Done!'
+end;
+{$ENDREGION}
 initialization
   RegisterClasses([TAdventOfCodeDay1, TAdventOfCodeDay2, TAdventOfCodeDay3, TAdventOfCodeDay4, TAdventOfCodeDay5,
-    TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10, TAdventOfCodeDay11,
-    TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14, TAdventOfCodeDay15, TAdventOfCodeDay16, TAdventOfCodeDay17,
-    TAdventOfCodeDay18, TAdventOfCodeDay19, TAdventOfCodeDay20, TAdventOfCodeDay21, TAdventOfCodeDay22, TAdventOfCodeDay23,
-    TAdventOfCodeDay24
-]);
+                   TAdventOfCodeDay6, TAdventOfCodeDay7, TAdventOfCodeDay8, TAdventOfCodeDay9, TAdventOfCodeDay10,
+                   TAdventOfCodeDay11, TAdventOfCodeDay12, TAdventOfCodeDay13, TAdventOfCodeDay14, TAdventOfCodeDay15,
+                   TAdventOfCodeDay16, TAdventOfCodeDay17, TAdventOfCodeDay18, TAdventOfCodeDay19, TAdventOfCodeDay20,
+                   TAdventOfCodeDay21, TAdventOfCodeDay22, TAdventOfCodeDay23, TAdventOfCodeDay24, TAdventOfCodeDay25]);
 
 end.
 

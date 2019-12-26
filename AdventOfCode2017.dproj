@@ -3,7 +3,7 @@
         <ProjectGuid>{7F580E63-F23C-4F5E-9074-88432D400C2B}</ProjectGuid>
         <ProjectVersion>18.4</ProjectVersion>
         <FrameworkType>VCL</FrameworkType>
-        <MainSource>AdventOfCode2019.dpr</MainSource>
+        <MainSource>AdventOfCode2017.dpr</MainSource>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
@@ -35,7 +35,7 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
-        <SanitizedProjectName>AdventOfCode2019</SanitizedProjectName>
+        <SanitizedProjectName>AdventOfCode2017</SanitizedProjectName>
         <Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;$(DCC_Namespace)</DCC_Namespace>
         <DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>
@@ -88,11 +88,7 @@
             <Form>$R *.res</Form>
         </DCCReference>
         <DCCReference Include="uAOCUtils.pas"/>
-        <DCCReference Include="IntComputers.pas"/>
         <DCCReference Include="uAOCTests.pas"/>
-        <DCCReference Include="uCryostasis.pas">
-            <Form>Cryostasis</Form>
-        </DCCReference>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -111,13 +107,13 @@
         <BorlandProject>
             <Delphi.Personality>
                 <Source>
-                    <Source Name="MainSource">AdventOfCode2019.dpr</Source>
+                    <Source Name="MainSource">AdventOfCode2017.dpr</Source>
                 </Source>
             </Delphi.Personality>
             <Deployment Version="3">
-                <DeployFile LocalName="Win32\Debug\AdventOfCode2019.exe" Configuration="Debug" Class="ProjectOutput">
+                <DeployFile LocalName="Win32\Debug\AdventOfCode2017.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
-                        <RemoteName>AdventOfCode2019.exe</RemoteName>
+                        <RemoteName>AdventOfCode2017.exe</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

@@ -1,4 +1,4 @@
-program AdventOfCode2019;
+program AdventOfCode2017;
 
 uses
   Vcl.Forms,
@@ -6,9 +6,7 @@ uses
   AOCBase in 'AOCBase.pas',
   AOCSolutions in 'AOCSolutions.pas' {$R *.res},
   uAOCUtils in 'uAOCUtils.pas',
-  IntComputers in 'IntComputers.pas',
-  uAOCTests in 'uAOCTests.pas',
-  uCryostasis in 'uCryostasis.pas' {Cryostasis};
+  uAOCTests in 'uAOCTests.pas';
 
 begin
   Application.Initialize;

@@ -39,4 +39,13 @@ object Form1: TForm1
     TabOrder = 2
     OnClick = btnTestClick
   end
+  object btnCryostasis: TButton
+    Left = 8
+    Top = 97
+    Width = 145
+    Height = 25
+    Caption = 'Cryostasis'
+    TabOrder = 3
+    OnClick = btnCryostasisClick
+  end
 end
